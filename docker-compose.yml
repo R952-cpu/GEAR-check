@@ -1,0 +1,44 @@
+# Toute la configuration propre à la machine vit dans le fichier « .env »,
+# qui n'est pas publié. Copier « .env.example » en « .env » pour démarrer.
+services:
+  regie:
+    build: .
+
+    # Le port hôte est configurable pour éviter un conflit avec un autre
+    # service. Le conteneur écoute toujours sur 3000 en interne.
+    ports:
+      - "${HOST_PORT:-3001}:3000"
+
+    volumes:
+      # Base de données et photos. Peut pointer vers un disque externe.
+      - ${DATA_PATH:-./data}:/data
+      # Destination des copies de sécurité. Inactif tant que BACKUP_DIR est vide.
+      - ${BACKUP_PATH:-./backups}:/sauvegardes
+
+    environment:
+      - DATA_DIR=/data
+      - PORT=3000
+      # Protection anti-DNS-rebinding : sans elle, un site web piégé ouvert sur
+      # le téléphone pourrait piloter l'application à l'insu de l'utilisateur.
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,[::1]}
+      - ALLOW_PRIVATE_HOSTS=${ALLOW_PRIVATE_HOSTS:-true}
+      # Vide = pas de sauvegarde automatique. Mettre /sauvegardes pour l'activer.
+      - BACKUP_DIR=${BACKUP_DIR:-}
+
+    restart: unless-stopped
+
+    # Docker redémarre le conteneur de lui-même s'il cesse de répondre.
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    # Sans limite, les journaux Docker grossissent indéfiniment et finissent par
+    # saturer le disque au bout de quelques mois de fonctionnement continu.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

@@ -1,0 +1,19 @@
+# Dépendances
+node_modules/
+
+# Données de l'application — ne doivent JAMAIS être publiées.
+# Elles contiennent les projets, checklists, photos et comptes-rendus réels.
+data/
+backups/
+*.db
+*.db-shm
+*.db-wal
+photos/
+
+# Configuration locale de la machine : chemins disque, adresses réseau.
+# Voir .env.example pour le modèle à recopier.
+.env
+
+# Divers
+.DS_Store
+*.log

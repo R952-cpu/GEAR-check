@@ -1,0 +1,11 @@
+# Le contexte de build ne doit contenir que le code.
+#
+# node_modules en particulier : il contient le binding natif de sqlite3 compilé
+# pour macOS, qui n'a rien à faire dans une image Linux. Sans cette exclusion,
+# le COPY final le recopiait par-dessus celui construit dans l'image.
+node_modules
+data
+tests
+.git
+*.log
+.DS_Store

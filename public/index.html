@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gear Check">
+<meta name="theme-color" content="#071013">
+<title>Gear Check</title>
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div id="app">
+
+<!-- ===== SCREEN: HOME ===== -->
+<div id="screen-home" class="screen">
+  <div class="hdr">
+    <div style="flex:1">
+      <div class="hdr-title">Gear Check</div>
+      <div class="hdr-sub">Assistant prépa caméra</div>
+    </div>
+    <button class="hdr-action" onclick="openNewProject()">+ Projet</button>
+  </div>
+  <div class="content" id="home-list"></div>
+</div>
+
+<!-- ===== SCREEN: PROJECT ===== -->
+<div id="screen-project" class="screen">
+  <div class="hdr">
+    <button class="hdr-back" onclick="go('home')">‹</button>
+    <div style="flex:1">
+      <div class="hdr-title" id="proj-title"></div>
+      <div class="hdr-sub" id="proj-sub"></div>
+    </div>
+    <button class="hdr-icon" onclick="openEditProject()">⋯</button>
+  </div>
+  <div class="content">
+    <div class="phase-grid">
+      <div class="phase-btn" onclick="goPrepa()">
+        <div class="phase-icon green">✓</div>
+        <div class="phase-info">
+          <div class="phase-label">Prépa</div>
+          <div class="phase-sub" id="prepa-sub">Inventaire & checklist chez le loueur</div>
+        </div>
+        <span class="phase-arrow">›</span>
+      </div>
+      <div class="phase-btn" onclick="goCompteRendus()">
+        <div class="phase-icon red">📋</div>
+        <div class="phase-info">
+          <div class="phase-label">Compte-rendus</div>
+          <div class="phase-sub" id="cr-sub">Défauts par semaine</div>
+        </div>
+        <span class="phase-arrow">›</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCREEN: PRÉPA ===== -->
+<div id="screen-prepa" class="screen">
+  <div class="hdr">
+    <button class="hdr-back" onclick="go('project')">‹</button>
+    <div style="flex:1"><div class="hdr-title">Prépa</div></div>
+    <button class="hdr-action" id="prepa-add-btn" onclick="prepaAdd()">+</button>
+  </div>
+  <div class="content" id="prepa-content"></div>
+</div>
+
+<!-- ===== SCREEN: COMPTE-RENDUS ===== -->
+<div id="screen-cr-list" class="screen">
+  <div class="hdr">
+    <button class="hdr-back" onclick="go('project')">‹</button>
+    <div style="flex:1"><div class="hdr-title">Compte-rendus</div></div>
+    <button class="hdr-action" onclick="openNewCR()">+ Semaine</button>
+  </div>
+  <div class="content" id="cr-list"></div>
+</div>
+
+<!-- ===== SCREEN: COMPTE-RENDU DETAIL ===== -->
+<div id="screen-cr" class="screen">
+  <div class="hdr">
+    <button class="hdr-back" onclick="go('cr-list')">‹</button>
+    <div style="flex:1"><div class="hdr-title" id="cr-title"></div></div>
+    <button class="hdr-icon" onclick="openCRMenu()">⋯</button>
+  </div>
+  <div class="content" id="cr-content"></div>
+  <button class="fab" onclick="openCRAddMenu()">+</button>
+</div>
+
+</div>
+
+<!-- ===== SHEETS ===== -->
+<div id="sheet-overlay" class="sheet-overlay" onclick="closeSheet(event)">
+  <div class="sheet" id="sheet">
+    <div class="sheet-handle"></div>
+    <div id="sheet-body"></div>
+  </div>
+</div>
+
+
+<!--
+  Scripts chargés dans l'ordre : chaque fichier définit des fonctions globales
+  appelées depuis les attributs onclick du HTML généré. Ce sont volontairement
+  des scripts classiques et non des modules ES — un module a sa propre portée,
+  ce qui casserait tous les onclick="..." de l'interface.
+
+  L'ordre compte pour deux raisons seulement : core.js déclare l'état partagé S,
+  et app.js démarre l'application. Entre les deux, l'ordre est libre.
+-->
+<!-- jsPDF n'est pas chargé ici : il l'est à la demande, au premier export (voir chargerJsPDF dans core.js). -->
+<script src="/js/core.js"></script>          <!-- état S, appels API, utilitaires, panneau bas -->
+<script src="/js/nav.js"></script>           <!-- navigation entre écrans, chargement des données -->
+<script src="/js/ecrans.js"></script>        <!-- accueil, écran projet, onglets de prépa -->
+<script src="/js/inventaire.js"></script>    <!-- onglet Inventaire : présence du matériel -->
+<script src="/js/import.js"></script>        <!-- prompt IA et import du JSON d'inventaire -->
+<script src="/js/checklist.js"></script>     <!-- onglet Checklist : phases et checks qualité -->
+<script src="/js/phases.js"></script>        <!-- création, édition et réordonnancement des phases -->
+<script src="/js/camera.js"></script>        <!-- onglet Réglages : profils de réglages caméra -->
+<script src="/js/manques.js"></script>       <!-- onglet Manques : matériel à demander au loueur -->
+<script src="/js/fichiers.js"></script>      <!-- onglet Fichiers : archive et pièces jointes -->
+<script src="/js/rapport-prepa.js"></script> <!-- compte-rendu de prépa : instantané et PDF -->
+<script src="/js/cr.js"></script>            <!-- comptes-rendus hebdomadaires de tournage -->
+<script src="/js/pdf.js"></script>           <!-- export PDF des comptes-rendus de tournage -->
+<script src="/js/app.js"></script>           <!-- démarrage -->
+</body>
+</html>
