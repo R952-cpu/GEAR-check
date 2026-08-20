@@ -349,6 +349,19 @@ repose sur des attributs `onclick`, qui ont besoin de fonctions globales.
 
 ---
 
+## Contribuer
+
+Les issues et les Pull Requests sont bienvenues. Avant de vous lancer, lisez
+[CONTRIBUTING.md](CONTRIBUTING.md) : il précise les conventions du projet, les
+trois choix techniques à ne pas défaire, et le point sur la licence — toute
+contribution est distribuée sous la même licence non commerciale que le reste
+du projet.
+
+Pour une **faille de sécurité**, n'ouvrez pas d'issue publique : passez par
+l'onglet *Security* du dépôt.
+
+---
+
 ## Licence
 
 **PolyForm Noncommercial License 1.0.0** — voir [LICENSE](LICENSE).
