@@ -10,9 +10,10 @@ backups/
 *.db-wal
 photos/
 
-# Configuration locale de la machine : chemins disque, adresses réseau.
-# Voir .env.example pour le modèle à recopier.
+# Configuration locale de la machine : chemins disque, adresses réseau, port.
+# Ce sont vos copies des modèles « .example » — elles restent chez vous.
 .env
+docker-compose.yml
 
 # Divers
 .DS_Store

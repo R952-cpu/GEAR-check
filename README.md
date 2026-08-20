@@ -96,54 +96,159 @@ seule ligne.
 
 ## Installation
 
-### Ce qu'il faut
+L'application se configure entièrement par variables d'environnement. Le dépôt
+ne contient que des **modèles** : vous en faites une copie, que git ignore, et
+votre configuration reste chez vous.
 
-- [Docker](https://docs.docker.com/get-docker/) avec Docker Compose
-- Rien d'autre : ni base de données à installer, ni compte à créer
-
-### Mise en route
+### Avec Docker Compose — le plus simple
 
 ```bash
 git clone https://github.com/R952-cpu/GEAR-check.git
 cd GEAR-check
+cp docker-compose.example.yml docker-compose.yml
 cp .env.example .env
 ```
 
-Ouvrez `.env` et ajustez au moins `DATA_PATH` (voir la section Configuration),
-puis :
+Ouvrez `.env`, ajustez au moins `DATA_PATH` et `HOST_PORT` (voir
+[Configuration](#configuration)), puis :
 
 ```bash
 docker compose up -d --build
 ```
 
-L'application répond sur `http://localhost:3001`. Depuis un téléphone du même
-réseau, utilisez l'adresse IP de la machine, par exemple
-`http://192.168.1.20:3001`.
+L'application répond sur `http://localhost:8080` — ou sur le port que vous avez
+choisi. Depuis un téléphone du même réseau, utilisez l'adresse IP de la
+machine, par exemple `http://192.168.1.20:8080`.
 
 Sur iPhone, « Partager → Sur l'écran d'accueil » l'installe comme une
 application : elle s'ouvre alors en plein écran, sans barre de navigateur.
 
-### Sans Docker
+### Avec Docker, sans Compose
 
 ```bash
-npm install
-DATA_DIR=./data npm start
+docker build -t gear-check .
+docker run -d --name gear-check \
+  -p 8080:3000 \
+  -v /chemin/vers/vos/donnees:/data \
+  -e DATA_DIR=/data \
+  -e ALLOWED_HOSTS=localhost,127.0.0.1 \
+  --restart unless-stopped \
+  gear-check
 ```
 
-L'application écoute sur le port 3000 par défaut.
+### Sans Docker, directement avec Node
+
+Node 20 ou plus récent. La compilation du module SQLite demande des outils de
+build (`build-essential` et `python3` sur Debian/Ubuntu, `xcode-select
+--install` sur macOS).
+
+```bash
+npm ci --omit=dev
+DATA_DIR=./data PORT=3000 npm start
+```
+
+---
+
+## Déploiement sur un serveur distant
+
+> ### ⚠️ À lire avant tout
+>
+> **L'application n'a aucune authentification.** Elle est conçue pour un
+> réseau dont l'accès est déjà restreint. Si vous la posez sur un VPS
+> accessible depuis Internet **sans rien devant**, n'importe qui pourra lire,
+> modifier et effacer toutes vos données — il suffit de trouver l'adresse.
+>
+> Deux façons correctes de procéder, au choix :
+>
+> 1. **Un VPN** (WireGuard, Tailscale…) : l'application n'écoute que sur
+>    l'interface du tunnel, rien n'est exposé publiquement. C'est le plus sûr.
+> 2. **Un reverse proxy qui exige un mot de passe** avant de laisser passer
+>    quoi que ce soit. C'est la méthode décrite ci-dessous.
+
+### Reverse proxy avec authentification
+
+Exemple avec [Caddy](https://caddyserver.com/), qui gère le certificat HTTPS
+tout seul. Générez d'abord une empreinte de mot de passe :
+
+```bash
+caddy hash-password
+```
+
+Puis dans votre `Caddyfile` :
+
+```caddyfile
+gear.exemple.org {
+    basic_auth {
+        # Sur Caddy antérieur à 2.8, la directive s'appelle « basicauth ».
+        votre-identifiant $2a$14$empreinte_generee_ci_dessus
+    }
+    reverse_proxy 127.0.0.1:8080
+}
+```
+
+L'équivalent avec Nginx passe par `auth_basic` et un fichier `htpasswd`, plus
+un certificat obtenu via Certbot.
+
+### Le réglage à ne pas oublier
+
+Derrière un reverse proxy, le nom de domaine doit figurer dans
+`ALLOWED_HOSTS`, sinon **l'application répondra `403 Hote non autorise`** :
+
+```dotenv
+ALLOWED_HOSTS=gear.exemple.org
+ALLOW_PRIVATE_HOSTS=false
+```
+
+C'est la protection anti-DNS-rebinding qui fait son travail — elle ne connaît
+pas encore votre domaine. Pensez aussi à ne publier le port qu'en local
+(`127.0.0.1:8080:3000` dans la section `ports`), pour que seul le proxy puisse
+joindre l'application.
+
+### En service système, sans Docker
+
+```ini
+# /etc/systemd/system/gear-check.service
+[Unit]
+Description=Gear Check
+After=network.target
+
+[Service]
+Type=simple
+User=gearcheck
+WorkingDirectory=/opt/gear-check
+Environment=DATA_DIR=/var/lib/gear-check
+Environment=PORT=3000
+Environment=ALLOWED_HOSTS=gear.exemple.org
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+
+# Le service n'a besoin d'écrire que dans son dossier de données.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/gear-check
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl enable --now gear-check
+```
 
 ---
 
 ## Configuration
 
-Tout se règle dans le fichier `.env`, qui n'est jamais publié.
+Tout se règle dans votre `.env`, qui n'est jamais publié.
 
 | Variable | Défaut | À quoi ça sert |
 |---|---|---|
 | `DATA_PATH` | `./data` | Où sont stockées la base et les photos. Un disque externe convient très bien : indiquez son point de montage. |
-| `HOST_PORT` | `3001` | Port d'écoute sur la machine hôte. |
-| `ALLOWED_HOSTS` | `localhost,127.0.0.1,[::1]` | Noms d'hôte autorisés à joindre l'application. N'ajoutez ici que des **noms de domaine** : les adresses IP privées sont déjà acceptées. |
-| `ALLOW_PRIVATE_HOSTS` | `true` | Accepte toute adresse IP privée (`192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`), ce qui couvre le réseau local et un tunnel VPN. |
+| `HOST_PORT` | `8080` | Port d'écoute sur la machine hôte. |
+| `ALLOWED_HOSTS` | `localhost,127.0.0.1,[::1]` | Noms d'hôte autorisés à joindre l'application. Ajoutez-y votre **nom de domaine** si vous passez par un reverse proxy. |
+| `ALLOW_PRIVATE_HOSTS` | `true` | Accepte toute adresse IP privée (`192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`), ce qui couvre le réseau local et un tunnel VPN. À passer à `false` sur un serveur public. |
 | `BACKUP_DIR` | *(vide)* | Chemin **dans le conteneur** où écrire les copies de sécurité. Vide = désactivé. Mettre `/sauvegardes` pour activer. |
 | `BACKUP_PATH` | `./backups` | Dossier **sur la machine hôte** correspondant. À placer sur un autre disque que `DATA_PATH`. |
 
@@ -163,10 +268,8 @@ Réglages plus fins, à passer en variables d'environnement si besoin :
 Évitez un port déjà occupé par un autre service. Si vous développez avec un
 outil qui surveille un port (panneau de prévisualisation, serveur de
 développement), ne lui faites **jamais** surveiller le port utilisé par le
-conteneur : il tuerait le processus qui le détient, et le conteneur partirait
-en boucle de redémarrage. C'est la raison d'être de `HOST_PORT`.
-
----
+conteneur : certains tuent le processus qui détient le port, et le conteneur
+part alors en boucle de redémarrage. C'est la raison d'être de `HOST_PORT`.
 
 ## Sauvegardes
 

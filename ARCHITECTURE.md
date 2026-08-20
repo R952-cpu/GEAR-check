@@ -67,11 +67,18 @@ Passer en modules casserait toute l'interface.
 ```bash
 npm run check    # syntaxe de tous les fichiers serveur
 npm test         # tests du référentiel et de la normalisation
-docker compose up -d --build --force-recreate regie
 
-# Test fonctionnel complet de l'API, contre un conteneur d'essai
+# Reconstruire et relancer (nécessite votre copie locale de docker-compose.yml,
+# faite depuis docker-compose.example.yml — voir le README)
+docker compose up -d --build --force-recreate
+
+# Test fonctionnel complet de l'API, contre un conteneur d'essai jetable
 BASE=http://127.0.0.1:4599 bash tests/api.smoke.sh
 ```
+
+Le dépôt ne contient que des modèles de configuration (`docker-compose.example.yml`,
+`.env.example`). Vos copies (`docker-compose.yml`, `.env`) sont ignorées par git :
+elles portent vos chemins, votre port et vos hôtes autorisés.
 
 ## Points d'attention
 
