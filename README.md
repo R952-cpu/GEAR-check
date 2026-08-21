@@ -42,6 +42,13 @@ PDF.
 quelqu'un qui ne connaît pas le matériel : « Présent — prêt », « Présent —
 vérification en cours », « Absent », avec vos remarques.
 
+Vous lui donnez un titre, et chaque document reçoit un **numéro de version**
+attribué automatiquement — une prépa s'étale souvent sur plusieurs jours, et
+il arrive de devoir rééditer un compte-rendu. Une précision facultative
+accompagne le numéro (« Jour 2 », « Rectificatif »…). Des **photos légendées**
+peuvent être ajoutées en fin de document, au moment de la génération ou plus
+tard sur un compte-rendu déjà archivé.
+
 **7. Comptes-rendus de tournage** — Semaine par semaine : les défauts
 constatés avec photos, et des notes libres colorées. Exportables en PDF.
 

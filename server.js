@@ -95,9 +95,10 @@ app.use(errorHandler);
 // ---------------------------------------------------------------------------
 
 async function demarrer() {
-  const { checksAvances, photosMigrees } = await initSchema();
+  const { checksAvances, photosMigrees, rapportsNumerotes } = await initSchema();
   if (checksAvances) console.log(`[schema] ${checksAvances} check(s) bascule(s) en avance`);
   if (photosMigrees) console.log(`[schema] ${photosMigrees} photo(s) de defaut migree(s)`);
+  if (rapportsNumerotes) console.log(`[schema] ${rapportsNumerotes} compte(s)-rendu(s) numerote(s)`);
 
   const sauvegardesActives = demarrerSauvegardes();
 

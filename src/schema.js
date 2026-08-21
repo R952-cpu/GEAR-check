@@ -7,7 +7,7 @@
  * colonnes ou les index ne seraient pas encore en place.
  */
 const crypto = require('crypto');
-const { dbExec, dbRun, dbGet, dbAll, withTransaction } = require('./db');
+const { dbExec, dbRun, dbGet, dbAll, withTransaction, runMany } = require('./db');
 const { advancedCheckLabels } = require('./referentiel');
 
 // ---------------------------------------------------------------------------
@@ -135,7 +135,17 @@ const TABLES = `
     project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     label TEXT NOT NULL,
     created_at TEXT NOT NULL,
-    data TEXT NOT NULL
+    data TEXT NOT NULL,
+    titre TEXT DEFAULT '',
+    version INTEGER DEFAULT 1,
+    version_note TEXT DEFAULT ''
+  );
+  CREATE TABLE IF NOT EXISTS prepa_report_photos (
+    id TEXT PRIMARY KEY,
+    report_id TEXT NOT NULL REFERENCES prepa_reports(id) ON DELETE CASCADE,
+    file_path TEXT NOT NULL,
+    legende TEXT DEFAULT '',
+    ordre INTEGER DEFAULT 0
   );
 `;
 
@@ -201,6 +211,9 @@ const COLONNES_AJOUTEES = [
   ['checklist_checks', 'avance', 'avance INTEGER DEFAULT 0'],
   ['camera_profiles', 'color', "color TEXT DEFAULT '#2ed6b3'"],
   ['camera_profiles', 'validated', 'validated INTEGER DEFAULT 0'],
+  ['prepa_reports', 'titre', "titre TEXT DEFAULT ''"],
+  ['prepa_reports', 'version', 'version INTEGER DEFAULT 1'],
+  ['prepa_reports', 'version_note', "version_note TEXT DEFAULT ''"],
 ];
 
 const getMeta = async (key) => (await dbGet('SELECT value FROM meta WHERE key=?', [key]))?.value || null;
@@ -253,6 +266,30 @@ async function migrateDefautPhotos() {
 }
 
 /**
+ * Numérote rétroactivement les comptes-rendus de prépa déjà archivés.
+ *
+ * La colonne `version` arrive avec une valeur par défaut de 1 : sans cette
+ * passe, tous les comptes-rendus antérieurs porteraient le même numéro, et le
+ * suivant repartirait à 2 en laissant plusieurs « v1 » derrière lui. On les
+ * renumérote donc une fois, par projet et par ordre de création.
+ */
+async function numeroterRapportsExistants() {
+  if (await getMeta('prepa_reports_versionnes')) return 0;
+  const rapports = await dbAll(
+    'SELECT id, project_id FROM prepa_reports ORDER BY project_id, created_at'
+  );
+  const compteurs = new Map();
+  const misesAJour = rapports.map((r) => {
+    const n = (compteurs.get(r.project_id) || 0) + 1;
+    compteurs.set(r.project_id, n);
+    return [n, r.id];
+  });
+  await runMany('UPDATE prepa_reports SET version=? WHERE id=?', misesAJour);
+  await setMeta('prepa_reports_versionnes', '1');
+  return misesAJour.length;
+}
+
+/**
  * Crée les tables et index manquants, applique les migrations, nettoie les
  * tables obsolètes. Idempotent : peut être rejoué à chaque démarrage.
  */
@@ -265,9 +302,10 @@ async function initSchema() {
     await ensureColumn(table, col, ddl);
   }
 
-  const [checks, photos] = await withTransaction(async () => [
+  const [checks, photos, rapports] = await withTransaction(async () => [
     await syncAdvancedChecks(),
     await migrateDefautPhotos(),
+    await numeroterRapportsExistants(),
   ]);
 
   // ANALYZE met à jour les statistiques dont SQLite se sert pour choisir un
@@ -275,7 +313,7 @@ async function initSchema() {
   // rester ignorés par le planificateur.
   await dbExec('ANALYZE');
 
-  return { checksAvances: checks, photosMigrees: photos };
+  return { checksAvances: checks, photosMigrees: photos, rapportsNumerotes: rapports };
 }
 
 module.exports = { initSchema, getMeta, setMeta };

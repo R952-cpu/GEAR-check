@@ -105,31 +105,155 @@ function reportSectionSummary(items) {
   return `${ready}/${items.length} prêt(s)`;
 }
 
+// ===== PHOTOS EN ATTENTE =====
+//
+// Les photos choisies pendant la génération ne peuvent pas être envoyées tout
+// de suite : le compte-rendu auquel les rattacher n'existe pas encore. Elles
+// patientent donc ici, déjà compressées, jusqu'à ce que le compte-rendu soit
+// créé — puis partent en une seule requête.
+
+let photosEnAttente = [];
+
+/** Ouvre le sélecteur de photos (appareil ou pellicule sur téléphone). */
+function choisirPhotosRapport() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.multiple = true;
+  input.onchange = async () => {
+    for (const fichier of [...input.files]) {
+      // Compression avant tout : une photo de téléphone pèse plusieurs Mo, et
+      // seule une version réduite est utile dans un PDF.
+      const compresse = await compressImage(fichier);
+      photosEnAttente.push({
+        fichier: compresse,
+        apercu: URL.createObjectURL(compresse),
+        legende: '',
+      });
+    }
+    renderPhotosEnAttente();
+  };
+  input.click();
+}
+
+function majLegendePhotoEnAttente(index, valeur) {
+  if (photosEnAttente[index]) photosEnAttente[index].legende = valeur;
+}
+
+function retirerPhotoEnAttente(index) {
+  const [retiree] = photosEnAttente.splice(index, 1);
+  if (retiree) URL.revokeObjectURL(retiree.apercu);
+  renderPhotosEnAttente();
+}
+
+/**
+ * Redessine la liste des photos choisies.
+ *
+ * Les légendes sont mémorisées à la frappe (`oninput`) et non à la lecture du
+ * DOM : redessiner la liste ne peut donc pas faire perdre ce qui vient d'être
+ * tapé dans un autre champ.
+ */
+function renderPhotosEnAttente() {
+  const zone = document.getElementById('rapport-photos');
+  if (!zone) return;
+  if (!photosEnAttente.length) {
+    zone.innerHTML = `<div style="color:var(--text3);font-size:13px;margin-bottom:8px">Aucune photo pour l'instant.</div>`;
+    return;
+  }
+  zone.innerHTML = photosEnAttente.map((p, i) => `
+    <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px">
+      <img src="${p.apercu}" style="width:64px;height:64px;object-fit:cover;border-radius:9px;flex-shrink:0">
+      <input class="form-input" style="flex:1" placeholder="Légende (facultative)"
+             value="${esc(p.legende)}" oninput="majLegendePhotoEnAttente(${i}, this.value)">
+      <button class="btn-icon-sm" onclick="retirerPhotoEnAttente(${i})">✕</button>
+    </div>`).join('');
+}
+
 function confirmGeneratePrepaReport() {
+  photosEnAttente = [];
+  // Le numéro est calculé côté serveur ; on l'annonce ici à titre indicatif,
+  // à partir des comptes-rendus déjà connus.
+  const prochaine = (S.prepaReports || []).reduce((m, r) => Math.max(m, r.version || 0), 0) + 1;
   openSheet(`
-    <div class="sheet-title">Générer le compte-rendu de prépa ?</div>
-    <p style="color:var(--text2);font-size:14px;margin-bottom:16px">Le PDF s'ouvre directement et une copie est classée dans Fichiers, comme pour une pièce jointe.</p>
+    <div class="sheet-title">Compte-rendu de prépa</div>
+    <p style="color:var(--text2);font-size:13.5px;margin-bottom:16px">
+      Ce sera la <strong style="color:var(--accent)">version ${prochaine}</strong> de ce projet.
+      Le PDF est téléchargé et une copie classée dans Fichiers → Archive.
+    </p>
+
+    <div class="form-group">
+      <label class="form-label">Titre du document</label>
+      <input class="form-input" id="in-rapport-titre" placeholder="Compte-rendu de prépa">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Précision sur cette version <span style="color:var(--text3);font-weight:400">— facultatif</span></label>
+      <input class="form-input" id="in-rapport-version-note" placeholder="Jour 2, Rectificatif, Après retour loueur…">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Photos en fin de document</label>
+      <div id="rapport-photos"></div>
+      <button class="btn btn-secondary" onclick="choisirPhotosRapport()">📷 Ajouter des photos</button>
+    </div>
+
     <div class="confirm-btns">
       <button class="btn btn-secondary" onclick="closeSheet()">Annuler</button>
       <button class="btn btn-primary" onclick="generatePrepaReport(this)">Générer</button>
     </div>
-  `);
+  `, { autofocus: false });
+  renderPhotosEnAttente();
 }
+
+/** Nom du fichier PDF téléchargé, daté et versionné. */
+function nomFichierRapport(r) {
+  const base = slugify(r.data.project.name || 'projet');
+  const jour = (r.data.generated_at || new Date().toISOString()).slice(0, 10);
+  return `compte-rendu-prepa-${base}-v${r.version || 1}-${jour}.pdf`;
+}
+
 async function generatePrepaReport(btn) {
   if (btn) btn.disabled = true;
-  await chargerJsPDF();
-  const data = buildPrepaSnapshot();
-  const label = `Compte-rendu de prépa · ${formatDate(data.generated_at)}`;
-  await api.post(`/api/projects/${S.projectId}/prepa-reports`, { label, data });
+  try {
+    const titre = (document.getElementById('in-rapport-titre')?.value || '').trim();
+    const versionNote = (document.getElementById('in-rapport-version-note')?.value || '').trim();
 
-  // Uniquement archivé dans Fichiers → Archive (pas dans les pièces jointes) —
-  // le PDF téléchargé localement reste une simple copie de travail.
-  const doc = buildPrepaReportDoc({ label, data });
-  const filename = `compte-rendu-prepa-${slugify(data.project.name)}-${data.generated_at.slice(0,10)}.pdf`;
-  doc.save(filename);
+    await chargerJsPDF();
+    const data = buildPrepaSnapshot();
+    const cree = await api.post(`/api/projects/${S.projectId}/prepa-reports`, {
+      titre, version_note: versionNote, data,
+    });
 
-  closeSheet();
-  showToast('✓ Compte-rendu de prépa généré (Fichiers → Archive)');
+    // Les photos ne partent qu'une fois le compte-rendu créé : c'est lui qui
+    // leur sert de point d'attache.
+    let photos = [];
+    if (photosEnAttente.length) {
+      const envoi = new FormData();
+      for (const p of photosEnAttente) envoi.append('photos', p.fichier);
+      envoi.append('legendes', JSON.stringify(photosEnAttente.map(p => p.legende)));
+      photos = (await api.upload(`/api/prepa-reports/${cree.id}/photos`, envoi)).photos || [];
+    }
+
+    const rapport = {
+      id: cree.id, version: cree.version, created_at: cree.created_at,
+      titre, version_note: versionNote,
+      label: titre || `Compte-rendu de prépa · v${cree.version}`,
+      data, photos,
+    };
+    const doc = await buildPrepaReportDoc(rapport);
+    doc.save(nomFichierRapport(rapport));
+
+    for (const p of photosEnAttente) URL.revokeObjectURL(p.apercu);
+    photosEnAttente = [];
+    closeSheet();
+    await reloadPrepaReports();
+    showToast(`✓ Compte-rendu v${cree.version} généré (Fichiers → Archive)`);
+  } catch (e) {
+    // Le bouton est réactivé pour permettre une nouvelle tentative ; le filet
+    // global (app.js) affiche le message d'erreur.
+    if (btn) btn.disabled = false;
+    throw e;
+  }
 }
 
 async function openPrepaReport(id) {
@@ -164,8 +288,14 @@ async function openPrepaReport(id) {
   const allItems = d.phases.flatMap(p => p.items);
   const readyCount = allItems.filter(it => reportItemStatus(it).kind === 'green').length;
 
-  let body = `<div class="sheet-title">${esc(r.label)}</div>`;
-  body += `<p style="color:var(--text2);font-size:13.5px;margin-bottom:16px">${esc(d.project.name)}${d.project.loueur ? ' · Loueur : ' + esc(d.project.loueur) : ''}<br>${readyCount}/${allItems.length} éléments prêts au total.</p>`;
+  const version = r.version || 1;
+  const mention = [`Version ${version}`, r.version_note].filter(Boolean).join(' — ');
+
+  let body = `<div class="sheet-title">${esc(r.titre || r.label)}</div>`;
+  body += `<p style="color:var(--text2);font-size:13.5px;margin-bottom:16px">
+    <span style="color:var(--accent);font-weight:600">${esc(mention)}</span> · ${esc(formatDate(r.created_at))}<br>
+    ${esc(d.project.name)}${d.project.loueur ? ' · Loueur : ' + esc(d.project.loueur) : ''}<br>
+    ${readyCount}/${allItems.length} éléments prêts au total.</p>`;
   // Deux familles de sections cohabitent dans le compte-rendu : les phases de
   // vérification, et le reste de l'inventaire regroupé par catégorie. Elles
   // portent parfois le MÊME nom — la phase « Caméra » et la catégorie
@@ -176,9 +306,71 @@ async function openPrepaReport(id) {
   if (phrase) {
     body += `<p style="color:var(--text2);font-size:13px;font-style:italic;margin:18px 0 14px">${esc(phrase)}</p>`;
   }
-  body += `<button class="btn btn-primary" style="margin-bottom:10px" onclick="exportPrepaReportPDF()">📄 Réexporter en PDF</button>
+  body += `<div class="form-group" style="margin-top:18px">
+      <label class="form-label">Photos du document</label>
+      <div id="archive-photos">${renderPhotosArchive(r)}</div>
+      <button class="btn btn-secondary" onclick="ajouterPhotosArchive('${id}')">📷 Ajouter des photos</button>
+    </div>`;
+  body += `<button class="btn btn-primary" style="margin-bottom:10px" onclick="exportPrepaReportPDF(this)">📄 Réexporter en PDF</button>
     <button class="btn btn-danger" onclick="deletePrepaReport('${id}')">Supprimer cette archive</button>`;
   openSheet(body, { autofocus: false });
+}
+
+/** Photos déjà rattachées à un compte-rendu archivé, légende modifiable. */
+function renderPhotosArchive(r) {
+  const photos = r.photos || [];
+  if (!photos.length) {
+    return `<div style="color:var(--text3);font-size:13px;margin-bottom:8px">Aucune photo dans ce document.</div>`;
+  }
+  return photos.map(p => `
+    <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px">
+      <a href="/photos/${esc(p.file_path)}" target="_blank">
+        <img src="/photos/${esc(p.file_path)}" loading="lazy"
+             style="width:64px;height:64px;object-fit:cover;border-radius:9px;flex-shrink:0">
+      </a>
+      <input class="form-input" style="flex:1" placeholder="Légende (facultative)"
+             value="${esc(p.legende)}" onchange="enregistrerLegendeArchive('${p.id}', this.value)">
+      <button class="btn-icon-sm" onclick="supprimerPhotoArchive('${p.id}')">✕</button>
+    </div>`).join('');
+}
+
+/**
+ * Ajoute des photos à un compte-rendu déjà archivé.
+ *
+ * Le PDF déjà téléchargé ne les contient évidemment pas : il faut le
+ * réexporter, ce que le message de confirmation rappelle.
+ */
+async function ajouterPhotosArchive(id) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.multiple = true;
+  input.onchange = async () => {
+    const fichiers = [...input.files];
+    if (!fichiers.length) return;
+    const envoi = new FormData();
+    for (const f of fichiers) envoi.append('photos', await compressImage(f));
+    envoi.append('legendes', JSON.stringify(fichiers.map(() => '')));
+    await api.upload(`/api/prepa-reports/${id}/photos`, envoi);
+    await openPrepaReport(id);
+    await reloadPrepaReports();
+    showToast('✓ Photos ajoutées — réexporte le PDF pour les y inclure');
+  };
+  input.click();
+}
+
+async function enregistrerLegendeArchive(photoId, legende) {
+  await api.put(`/api/prepa-report-photos/${photoId}`, { legende });
+  const r = window.__currentPrepaReport;
+  const photo = (r?.photos || []).find(p => p.id === photoId);
+  if (photo) photo.legende = legende;
+  showToast('✓ Légende enregistrée');
+}
+
+async function supprimerPhotoArchive(photoId) {
+  await api.del(`/api/prepa-report-photos/${photoId}`);
+  const id = window.__currentPrepaReport?.id;
+  if (id) { await openPrepaReport(id); await reloadPrepaReports(); }
 }
 async function deletePrepaReport(id) {
   await api.del(`/api/prepa-reports/${id}`);
@@ -186,7 +378,9 @@ async function deletePrepaReport(id) {
   await reloadPrepaReports();
 }
 
-function buildPrepaReportDoc(r) {
+// Construit le PDF. Asynchrone parce que l'insertion des photos suppose de les
+// charger et de les redimensionner avant de les poser sur la page.
+async function buildPrepaReportDoc(r) {
   const d = r.data;
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
@@ -213,6 +407,29 @@ function buildPrepaReportDoc(r) {
   let hy = 19;
   for (const line of metaLines) { doc.text(line, margin, hy); hy += 5; }
   y = headerH + 8;
+
+  // Titre et version dans la zone blanche, sous le bandeau. Le bandeau reste
+  // identique d'un compte-rendu à l'autre : c'est ici que le document se
+  // distingue des précédents, et c'est là que le lecteur cherche de quoi il
+  // s'agit et à quelle passe de prépa il correspond.
+  if (r.titre) {
+    doc.setFontSize(15);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(25, 25, 30);
+    for (const ligne of doc.splitTextToSize(r.titre, W - margin * 2)) {
+      checkY(8);
+      doc.text(ligne, margin, y);
+      y += 7;
+    }
+    y += 1;
+  }
+  const mentionVersion = [`Version ${r.version || 1}`, r.version_note].filter(Boolean).join('  —  ');
+  checkY(8);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(120, 120, 128);
+  doc.text(mentionVersion, margin, y);
+  y += 9;
 
   // Résumé global en tête, pour une lecture rapide sans jargon technique.
   const allItems = d.phases.flatMap(p => p.items);
@@ -286,13 +503,84 @@ function buildPrepaReportDoc(r) {
     }
   }
 
+  y = await ajouterPhotosAuPdf(doc, r, { W, margin, y });
+
   return doc;
 }
-async function exportPrepaReportPDF() {
+
+/**
+ * Ajoute les photos légendées à la fin du document.
+ *
+ * Chaque image est redimensionnée pour tenir dans la largeur utile sans
+ * dépasser une hauteur raisonnable, afin qu'une photo verticale prise au
+ * téléphone n'occupe pas une page entière à elle seule. Une photo illisible
+ * est simplement ignorée : elle ne doit pas faire échouer tout l'export.
+ *
+ * @returns {Promise<number>} La position verticale après le dernier élément.
+ */
+async function ajouterPhotosAuPdf(doc, r, { W, margin, y }) {
+  const photos = r.photos || [];
+  if (!photos.length) return y;
+
+  const largeurUtile = W - margin * 2;
+  const HAUTEUR_MAX = 100;
+  const addPage = () => { doc.addPage(); y = margin; };
+  const place = (besoin) => { if (y + besoin > 280) addPage(); };
+
+  place(18);
+  y += 4;
+  doc.setFillColor(240, 240, 245);
+  doc.roundedRect(margin, y - 4, largeurUtile, 8, 2, 2, 'F');
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(30, 30, 35);
+  doc.text(`Photos  —  ${photos.length}`, margin + 3, y + 1.5);
+  y += 12;
+
+  for (const photo of photos) {
+    let image;
+    try {
+      image = await loadImageForPdf(`/photos/${photo.file_path}`);
+    } catch {
+      console.warn('[rapport] photo illisible, ignorée :', photo.file_path);
+      continue;
+    }
+
+    let l = largeurUtile;
+    let h = image.h * (l / image.w);
+    if (h > HAUTEUR_MAX) { h = HAUTEUR_MAX; l = image.w * (h / image.h); }
+
+    const lignesLegende = photo.legende
+      ? doc.splitTextToSize(photo.legende, largeurUtile)
+      : [];
+
+    // On réserve l'image ET sa légende d'un bloc : une légende ne doit jamais
+    // se retrouver seule en haut de la page suivante.
+    place(h + lignesLegende.length * 4.5 + 8);
+    doc.addImage(image.data, 'JPEG', margin, y, l, h);
+    y += h + 4;
+
+    if (lignesLegende.length) {
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(90, 90, 95);
+      doc.text(lignesLegende, margin, y);
+      y += lignesLegende.length * 4.5;
+    }
+    y += 6;
+  }
+  return y;
+}
+async function exportPrepaReportPDF(btn) {
   const r = window.__currentPrepaReport;
   if (!r) return;
-  await chargerJsPDF();
-  const doc = buildPrepaReportDoc(r);
-  doc.save(`compte-rendu-prepa-${slugify(r.data.project.name)}-${(r.data.generated_at || '').slice(0, 10)}.pdf`);
+  if (btn) btn.disabled = true;
+  try {
+    await chargerJsPDF();
+    const doc = await buildPrepaReportDoc(r);
+    doc.save(nomFichierRapport(r));
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
