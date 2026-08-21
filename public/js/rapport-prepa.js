@@ -177,7 +177,6 @@ function confirmGeneratePrepaReport() {
   openSheet(`
     <div class="sheet-title">Compte-rendu de prépa</div>
     <p style="color:var(--text2);font-size:13.5px;margin-bottom:16px">
-      Ce sera la <strong style="color:var(--accent)">version ${prochaine}</strong> de ce projet.
       Le PDF est téléchargé et une copie classée dans Fichiers → Archive.
     </p>
 
@@ -187,7 +186,15 @@ function confirmGeneratePrepaReport() {
     </div>
 
     <div class="form-group">
-      <label class="form-label">Précision sur cette version <span style="color:var(--text3);font-weight:400">— facultatif</span></label>
+      <label class="form-label">Version</label>
+      <input class="form-input" id="in-rapport-version" value="${prochaine}">
+      <div style="font-size:12px;color:var(--text3);margin-top:5px">
+        Pré-remplie avec le numéro suivant. Tu peux la remplacer — un autre numéro, ou « Finale ».
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Précision <span style="color:var(--text3);font-weight:400">— facultatif</span></label>
       <input class="form-input" id="in-rapport-version-note" placeholder="Jour 2, Rectificatif, Après retour loueur…">
     </div>
 
@@ -205,23 +212,35 @@ function confirmGeneratePrepaReport() {
   renderPhotosEnAttente();
 }
 
+/**
+ * Libellé de version à afficher.
+ *
+ * `version` est l'entier interne qui sert à ordonner les documents et à
+ * proposer le numéro suivant ; `version_label` est ce que l'utilisateur a
+ * éventuellement écrit à la place (« Finale », « 3 bis »).
+ */
+function libelleVersion(r) {
+  return String(r.version_label || r.version || 1);
+}
+
 /** Nom du fichier PDF téléchargé, daté et versionné. */
 function nomFichierRapport(r) {
-  const base = slugify(r.data.project.name || 'projet');
-  const jour = (r.data.generated_at || new Date().toISOString()).slice(0, 10);
-  return `compte-rendu-prepa-${base}-v${r.version || 1}-${jour}.pdf`;
+  const base = slugify(r.data?.project?.name || 'projet');
+  const jour = (r.data?.generated_at || r.created_at || new Date().toISOString()).slice(0, 10);
+  return `compte-rendu-prepa-${base}-v${slugify(libelleVersion(r))}-${jour}.pdf`;
 }
 
 async function generatePrepaReport(btn) {
   if (btn) btn.disabled = true;
   try {
     const titre = (document.getElementById('in-rapport-titre')?.value || '').trim();
+    const version = (document.getElementById('in-rapport-version')?.value || '').trim();
     const versionNote = (document.getElementById('in-rapport-version-note')?.value || '').trim();
 
     await chargerJsPDF();
     const data = buildPrepaSnapshot();
     const cree = await api.post(`/api/projects/${S.projectId}/prepa-reports`, {
-      titre, version_note: versionNote, data,
+      titre, version_label: version, version_note: versionNote, data,
     });
 
     // Les photos ne partent qu'une fois le compte-rendu créé : c'est lui qui
@@ -235,9 +254,9 @@ async function generatePrepaReport(btn) {
     }
 
     const rapport = {
-      id: cree.id, version: cree.version, created_at: cree.created_at,
-      titre, version_note: versionNote,
-      label: titre || `Compte-rendu de prépa · v${cree.version}`,
+      id: cree.id, version: cree.version, version_label: cree.version_label,
+      created_at: cree.created_at, titre, version_note: versionNote,
+      label: titre || `Compte-rendu de prépa · v${cree.version_label || cree.version}`,
       data, photos,
     };
     const doc = await buildPrepaReportDoc(rapport);
@@ -247,7 +266,7 @@ async function generatePrepaReport(btn) {
     photosEnAttente = [];
     closeSheet();
     await reloadPrepaReports();
-    showToast(`✓ Compte-rendu v${cree.version} généré (Fichiers → Archive)`);
+    showToast(`✓ Compte-rendu ${libelleVersion(rapport)} généré (Fichiers → Archive)`);
   } catch (e) {
     // Le bouton est réactivé pour permettre une nouvelle tentative ; le filet
     // global (app.js) affiche le message d'erreur.
@@ -259,7 +278,11 @@ async function generatePrepaReport(btn) {
 async function openPrepaReport(id) {
   const r = await api.get(`/api/prepa-reports/${id}`);
   window.__currentPrepaReport = r;
-  const d = r.data;
+  // Même précaution que pour le PDF : un instantané vide doit s'afficher, pas
+  // faire échouer l'ouverture de la fiche.
+  const d = r.data || {};
+  d.project = d.project || {};
+  d.phases = d.phases || [];
   const badgeClass = { green: 'badge-green', orange: 'badge-orange', red: 'badge-red' };
   const renderSection = (title, sub, items) => `
     <div class="phase-group" style="margin-bottom:14px">
@@ -288,13 +311,12 @@ async function openPrepaReport(id) {
   const allItems = d.phases.flatMap(p => p.items);
   const readyCount = allItems.filter(it => reportItemStatus(it).kind === 'green').length;
 
-  const version = r.version || 1;
-  const mention = [`Version ${version}`, r.version_note].filter(Boolean).join(' — ');
+  const mention = [`Version ${libelleVersion(r)}`, r.version_note].filter(Boolean).join(' — ');
 
   let body = `<div class="sheet-title">${esc(r.titre || r.label)}</div>`;
   body += `<p style="color:var(--text2);font-size:13.5px;margin-bottom:16px">
     <span style="color:var(--accent);font-weight:600">${esc(mention)}</span> · ${esc(formatDate(r.created_at))}<br>
-    ${esc(d.project.name)}${d.project.loueur ? ' · Loueur : ' + esc(d.project.loueur) : ''}<br>
+    ${esc(d.project.name || 'Projet')}${d.project.loueur ? ' · Loueur : ' + esc(d.project.loueur) : ''}<br>
     ${readyCount}/${allItems.length} éléments prêts au total.</p>`;
   // Deux familles de sections cohabitent dans le compte-rendu : les phases de
   // vérification, et le reste de l'inventaire regroupé par catégorie. Elles
@@ -372,16 +394,67 @@ async function supprimerPhotoArchive(photoId) {
   const id = window.__currentPrepaReport?.id;
   if (id) { await openPrepaReport(id); await reloadPrepaReports(); }
 }
+/**
+ * Régénère et télécharge le PDF d'un compte-rendu archivé.
+ *
+ * Le PDF n'est pas stocké : il est reconstruit à partir de l'instantané figé et
+ * des photos rattachées. Une photo ajoutée après coup se retrouve donc dans le
+ * document sans qu'il y ait rien à resynchroniser.
+ */
+async function ouvrirPdfArchive(id, element) {
+  const libelleInitial = element?.style.opacity;
+  if (element) element.style.opacity = '0.5';
+  try {
+    const r = await api.get(`/api/prepa-reports/${id}`);
+    window.__currentPrepaReport = r;
+    await chargerJsPDF();
+    const doc = await buildPrepaReportDoc(r);
+    doc.save(nomFichierRapport(r));
+  } finally {
+    if (element) element.style.opacity = libelleInitial || '';
+  }
+}
+
+/**
+ * Demande confirmation avant de supprimer un compte-rendu.
+ *
+ * Contrairement à une pièce jointe, un compte-rendu archivé n'est pas
+ * récupérable : l'instantané de la prépa disparaît avec lui, et ses photos
+ * sont effacées du disque.
+ */
+function confirmerSuppressionArchive(id) {
+  const r = (S.prepaReports || []).find(x => x.id === id);
+  const nom = r ? (r.titre || r.label) : 'ce compte-rendu';
+  const photos = r?.nb_photos ? ` et ses ${r.nb_photos} photo(s)` : '';
+  openSheet(`
+    <div class="sheet-title">Supprimer ce compte-rendu ?</div>
+    <p style="color:var(--text2);font-size:14px;margin-bottom:16px">
+      <strong style="color:var(--text)">${esc(nom)}</strong>${photos} sera définitivement supprimé.
+      L'instantané de la prépa qu'il contient ne peut pas être reconstitué.
+    </p>
+    <div class="confirm-btns">
+      <button class="btn btn-secondary" onclick="closeSheet()">Annuler</button>
+      <button class="btn btn-danger" onclick="deletePrepaReport('${id}')">Supprimer</button>
+    </div>
+  `);
+}
+
 async function deletePrepaReport(id) {
   await api.del(`/api/prepa-reports/${id}`);
   closeSheet();
   await reloadPrepaReports();
+  showToast('Compte-rendu supprimé');
 }
 
 // Construit le PDF. Asynchrone parce que l'insertion des photos suppose de les
 // charger et de les redimensionner avant de les poser sur la page.
 async function buildPrepaReportDoc(r) {
-  const d = r.data;
+  // Un instantané peut être vide : le serveur renvoie un objet nu plutôt qu'une
+  // erreur quand il en trouve un illisible. Le document doit alors sortir
+  // quand même, réduit à son en-tête et à ses photos, plutôt que d'échouer.
+  const d = r.data || {};
+  d.project = d.project || {};
+  d.phases = d.phases || [];
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
   const W = 210, margin = 15;
@@ -389,7 +462,7 @@ async function buildPrepaReportDoc(r) {
   const addPage = () => { doc.addPage(); y = margin; };
   const checkY = (needed) => { if (y + needed > 280) addPage(); };
 
-  const metaLines = [d.project.name];
+  const metaLines = [d.project.name || 'Projet'];
   if (d.project.loueur) metaLines.push(`Loueur : ${d.project.loueur}`);
   const contact = [d.project.assistant, d.project.email, d.project.phone].filter(Boolean).join(' · ');
   if (contact) metaLines.push(contact);
@@ -423,7 +496,7 @@ async function buildPrepaReportDoc(r) {
     }
     y += 1;
   }
-  const mentionVersion = [`Version ${r.version || 1}`, r.version_note].filter(Boolean).join('  —  ');
+  const mentionVersion = [`Version ${libelleVersion(r)}`, r.version_note].filter(Boolean).join('  —  ');
   checkY(8);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');

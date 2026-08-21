@@ -32,10 +32,11 @@ const PHOTOS_MAX = 40;
 
 const LONGUEUR_TITRE = 120;
 const LONGUEUR_NOTE = 80;
+const LONGUEUR_VERSION = 24;
 const LONGUEUR_LEGENDE = 300;
 
 /** Colonnes renvoyées pour une liste : jamais `data`, inutile et volumineux. */
-const COLONNES_LISTE = 'id, project_id, label, titre, version, version_note, created_at';
+const COLONNES_LISTE = 'id, project_id, label, titre, version, version_label, version_note, created_at';
 
 // ---------------------------------------------------------------------------
 // Lecture
@@ -92,10 +93,11 @@ router.post('/api/projects/:id/prepa-reports', async (req, res) => {
 
   const titre = String(req.body.titre || '').trim().slice(0, LONGUEUR_TITRE);
   const versionNote = String(req.body.version_note || '').trim().slice(0, LONGUEUR_NOTE);
+  const saisie = String(req.body.version_label || '').trim().slice(0, LONGUEUR_VERSION);
   const id = uuid();
   const creeLe = now();
 
-  const version = await withTransaction(async () => {
+  const resultat = await withTransaction(async () => {
     // Le numéro suit le projet, pas la date : deux comptes-rendus générés le
     // même jour restent distincts et ordonnés.
     const { m } = await dbGet(
@@ -103,18 +105,30 @@ router.post('/api/projects/:id/prepa-reports', async (req, res) => {
       [req.params.id]
     );
     const suivante = m + 1;
+
+    // La saisie est libre, mais le compteur interne doit rester exploitable :
+    //  - un nombre force le numéro, et la suite repart de là ;
+    //  - un texte (« Finale », « 3 bis ») est conservé tel quel pour
+    //    l'affichage, tandis que le compteur poursuit sa progression normale.
+    // `version` reste donc toujours un entier, qui sert à ordonner les
+    // documents et à proposer le numéro suivant.
+    const forceNombre = /^\d{1,4}$/.test(saisie);
+    const version = forceNombre ? Number(saisie) : suivante;
+    const versionLabel = (!saisie || saisie === String(version)) ? '' : saisie;
+
+    const affichage = versionLabel || String(version);
     // `label` reste renseigné : c'est lui que lisent les archives d'avant
     // l'introduction du titre et de la version.
-    const label = titre || `Compte-rendu de prépa · v${suivante}`;
+    const label = titre || `Compte-rendu de prépa · v${affichage}`;
     await dbRun(
-      `INSERT INTO prepa_reports (id, project_id, label, created_at, data, titre, version, version_note)
-       VALUES (?,?,?,?,?,?,?,?)`,
-      [id, req.params.id, label, creeLe, data, titre, suivante, versionNote]
+      `INSERT INTO prepa_reports (id, project_id, label, created_at, data, titre, version, version_label, version_note)
+       VALUES (?,?,?,?,?,?,?,?,?)`,
+      [id, req.params.id, label, creeLe, data, titre, version, versionLabel, versionNote]
     );
-    return suivante;
+    return { version, version_label: versionLabel };
   });
 
-  res.json({ id, version, created_at: creeLe });
+  res.json({ id, ...resultat, created_at: creeLe });
 });
 
 router.delete('/api/prepa-reports/:id', async (req, res) => {

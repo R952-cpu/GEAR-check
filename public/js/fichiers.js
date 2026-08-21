@@ -12,15 +12,28 @@ function renderFichiers() {
   if (!reports.length) {
     html += `<div class="empty" style="padding:34px 24px"><div class="empty-icon">🗄</div><div class="empty-text">Aucun compte-rendu de prépa pour l'instant — génère-le depuis l'onglet Checklist une fois la prépa terminée.</div></div>`;
   } else {
-    html += `<div class="card" style="margin-bottom:20px">${reports.map(r => `
-      <div class="list-item" onclick="openPrepaReport('${r.id}')">
+    // Un compte-rendu se comporte comme un fichier : on clique dessus pour
+    // l'ouvrir en PDF. Le crayon donne accès au détail (photos, légendes), la
+    // croix rouge le supprime — même disposition que les pièces jointes juste
+    // en dessous, pour ne pas avoir deux logiques dans le même écran.
+    html += `<div class="card" style="margin-bottom:20px">${reports.map(r => {
+      const details = [
+        `Version ${esc(r.version_label || r.version || 1)}`,
+        r.version_note && esc(r.version_note),
+        formatDate(r.created_at),
+        r.nb_photos ? `${r.nb_photos} photo${r.nb_photos > 1 ? 's' : ''}` : '',
+      ].filter(Boolean).join(' · ');
+      return `
+      <div class="attach-item">
         <div class="attach-icon pdf">🗄</div>
-        <div class="list-item-content">
-          <div class="list-item-title">${esc(r.label)}</div>
-          <div class="list-item-sub">${formatDate(r.created_at)}</div>
+        <div style="flex:1;min-width:0;cursor:pointer" onclick="ouvrirPdfArchive('${r.id}', this)">
+          <div class="attach-name" style="display:block">${esc(r.titre || r.label)}</div>
+          <div class="list-item-sub">${details}</div>
         </div>
-        <span class="list-item-arrow">›</span>
-      </div>`).join('')}</div>`;
+        <button class="btn-icon-sm" onclick="openPrepaReport('${r.id}')" title="Détail et photos">✎</button>
+        <button class="btn-icon-sm" style="color:var(--red)" onclick="confirmerSuppressionArchive('${r.id}')">✕</button>
+      </div>`;
+    }).join('')}</div>`;
   }
 
   html += `<div class="section-hdr"><span class="section-hdr-label">Fichiers</span></div>`;

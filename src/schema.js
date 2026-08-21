@@ -138,6 +138,7 @@ const TABLES = `
     data TEXT NOT NULL,
     titre TEXT DEFAULT '',
     version INTEGER DEFAULT 1,
+    version_label TEXT DEFAULT '',
     version_note TEXT DEFAULT ''
   );
   CREATE TABLE IF NOT EXISTS prepa_report_photos (
@@ -213,6 +214,7 @@ const COLONNES_AJOUTEES = [
   ['camera_profiles', 'validated', 'validated INTEGER DEFAULT 0'],
   ['prepa_reports', 'titre', "titre TEXT DEFAULT ''"],
   ['prepa_reports', 'version', 'version INTEGER DEFAULT 1'],
+  ['prepa_reports', 'version_label', "version_label TEXT DEFAULT ''"],
   ['prepa_reports', 'version_note', "version_note TEXT DEFAULT ''"],
 ];
 
