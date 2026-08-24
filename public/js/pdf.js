@@ -5,6 +5,7 @@
 
 // ===== PDF EXPORT (inchangé) =====
 async function exportPDF() {
+  return avecChargement('Génération du PDF…', async () => {
   await chargerJsPDF();
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
@@ -103,6 +104,7 @@ async function exportPDF() {
   }
 
   doc.save(`compte-rendu-${slugify(S.cr.semaine_label)}.pdf`);
+  });
 }
 
 // Compresse/redimensionne une image côté navigateur AVANT l'upload : envoi bien

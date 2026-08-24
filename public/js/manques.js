@@ -41,6 +41,7 @@ async function exportManquesPDF() {
   // ce qui est déjà demandé/obtenu n'a plus rien à faire dans ce document.
   const manques = (S.manques || []).filter(m => m.status === 'a_demander');
   if (!manques.length) { showToast('Rien à demander pour le moment', true); return; }
+  return avecChargement('Génération du PDF…', async () => {
   await chargerJsPDF();
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
@@ -106,6 +107,7 @@ async function exportManquesPDF() {
   } catch {
     showToast('PDF téléchargé (échec de la copie dans Fichiers)', true);
   }
+  });
 }
 
 

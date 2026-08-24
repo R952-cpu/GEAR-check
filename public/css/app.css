@@ -398,3 +398,61 @@
     55%      { transform: rotate(-3deg) translateY(0); }
     75%      { transform: rotate(-6deg) translateY(-2px); }
   }
+
+  /* ===== Voiles de chargement =====================================
+     Deux mises en scène, un même voile. Le fond translucide laisse deviner
+     l'écran en dessous — l'utilisateur garde son repère — tout en bloquant
+     l'interaction le temps de l'action. Voir chargement.js pour la logique
+     de temps (durée minimale, tours supplémentaires, confirmation). */
+  .voile { position: fixed; inset: 0; z-index: 400;
+    background: oklch(97% 0.002 90 / 62%);
+    -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+    display: flex; align-items: center; justify-content: center;
+    animation: voileEntree .15s ease-out; }
+  .voile-sortie { animation: voileSortie .2s ease-in forwards; }
+  @keyframes voileEntree { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes voileSortie { to { opacity: 0; } }
+
+  .voile-boite { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .voile-libelle { font-size: 12px; font-weight: 700; letter-spacing: 0.3px; color: oklch(45% 0.006 90); }
+  .voile-mascotte { width: 76px; height: 76px; border-radius: 14px;
+    box-shadow: 0 10px 22px -8px rgba(20,15,10,0.35); }
+
+  /* Voile A — la mascotte tourne sur elle-même comme une pièce. La
+     perspective sur le parent donne sa profondeur à la rotation. */
+  .voile-scene { perspective: 400px; }
+  .voile-tourne { animation: voilePiece .7s linear infinite; }
+  @keyframes voilePiece { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
+  .voile-ombre { width: 46px; height: 8px; border-radius: 50%; background: #00000026;
+    animation: voileOmbre .5s ease-in-out infinite; }
+  @keyframes voileOmbre { 0%, 100% { transform: scaleX(1); opacity: .35; }
+                          50%      { transform: scaleX(.55); opacity: .18; } }
+
+  /* Voile A — verdict. La coche ne s'affiche qu'après une action réellement
+     réussie ; un échec montre la croix rouge à la même place. */
+  .voile-verdict { width: 66px; height: 66px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; color: #FFFFFF;
+    animation: voileVerdict .3s ease-out; }
+  .voile-verdict-succes { background: oklch(62% 0.17 145); box-shadow: 0 10px 22px -6px oklch(62% 0.17 145 / 55%); }
+  .voile-verdict-echec  { background: var(--red);          box-shadow: 0 10px 22px -6px oklch(55% 0.2 27 / 55%); }
+  @keyframes voileVerdict { 0%   { transform: scale(.4); opacity: 0; }
+                            60%  { transform: scale(1.12); opacity: 1; }
+                            100% { transform: scale(1); opacity: 1; } }
+
+  /* Voile B — la mascotte sautille au-dessus d'une barre qui se remplit. */
+  .voile-sautille { width: 64px; height: 64px; animation: voileSaut .6s ease-in-out infinite; }
+  @keyframes voileSaut { 0%, 100% { transform: translateY(0) rotate(-3deg); }
+                         50%      { transform: translateY(-9px) rotate(3deg); } }
+  .voile-barre { width: 150px; height: 6px; border-radius: 3px;
+    background: oklch(87% 0.004 90); overflow: hidden; }
+  .voile-barre-remplissage { height: 100%; width: 0; border-radius: 3px; background: var(--accent);
+    animation: voileBarre 780ms cubic-bezier(.25,.8,.4,1) forwards; }
+  /* S'arrête à 92 % : une barre pleine alors que l'écran n'est pas encore
+     prêt annoncerait une fin qui n'a pas eu lieu. Le dernier segment est
+     joué par chargement.js au moment où le chargement aboutit vraiment. */
+  @keyframes voileBarre { to { width: 92%; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .voile-tourne, .voile-sautille, .voile-ombre, .voile-barre-remplissage { animation: none !important; }
+    .voile-barre-remplissage { width: 92%; }
+  }

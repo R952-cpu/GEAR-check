@@ -237,6 +237,7 @@ async function generatePrepaReport(btn) {
     const version = (document.getElementById('in-rapport-version')?.value || '').trim();
     const versionNote = (document.getElementById('in-rapport-version-note')?.value || '').trim();
 
+    const rapport = await avecChargement('Génération du compte-rendu…', async () => {
     await chargerJsPDF();
     const data = buildPrepaSnapshot();
     const cree = await api.post(`/api/projects/${S.projectId}/prepa-reports`, {
@@ -261,6 +262,8 @@ async function generatePrepaReport(btn) {
     };
     const doc = await buildPrepaReportDoc(rapport);
     doc.save(nomFichierRapport(rapport));
+    return rapport;
+    });
 
     for (const p of photosEnAttente) URL.revokeObjectURL(p.apercu);
     photosEnAttente = [];
@@ -276,7 +279,8 @@ async function generatePrepaReport(btn) {
 }
 
 async function openPrepaReport(id) {
-  const r = await api.get(`/api/prepa-reports/${id}`);
+  const r = await avecChargement('Ouverture du compte-rendu…',
+    () => api.get(`/api/prepa-reports/${id}`));
   window.__currentPrepaReport = r;
   // Même précaution que pour le PDF : un instantané vide doit s'afficher, pas
   // faire échouer l'ouverture de la fiche.
@@ -370,10 +374,12 @@ async function ajouterPhotosArchive(id) {
   input.onchange = async () => {
     const fichiers = [...input.files];
     if (!fichiers.length) return;
-    const envoi = new FormData();
-    for (const f of fichiers) envoi.append('photos', await compressImage(f));
-    envoi.append('legendes', JSON.stringify(fichiers.map(() => '')));
-    await api.upload(`/api/prepa-reports/${id}/photos`, envoi);
+    await avecChargement(fichiers.length > 1 ? 'Envoi des photos…' : 'Envoi de la photo…', async () => {
+      const envoi = new FormData();
+      for (const f of fichiers) envoi.append('photos', await compressImage(f));
+      envoi.append('legendes', JSON.stringify(fichiers.map(() => '')));
+      await api.upload(`/api/prepa-reports/${id}/photos`, envoi);
+    });
     await openPrepaReport(id);
     await reloadPrepaReports();
     showToast('Photos ajoutées — réexporte le PDF pour les y inclure');
@@ -405,11 +411,13 @@ async function ouvrirPdfArchive(id, element) {
   const libelleInitial = element?.style.opacity;
   if (element) element.style.opacity = '0.5';
   try {
-    const r = await api.get(`/api/prepa-reports/${id}`);
-    window.__currentPrepaReport = r;
-    await chargerJsPDF();
-    const doc = await buildPrepaReportDoc(r);
-    doc.save(nomFichierRapport(r));
+    await avecChargement('Génération du PDF…', async () => {
+      const r = await api.get(`/api/prepa-reports/${id}`);
+      window.__currentPrepaReport = r;
+      await chargerJsPDF();
+      const doc = await buildPrepaReportDoc(r);
+      doc.save(nomFichierRapport(r));
+    });
   } finally {
     if (element) element.style.opacity = libelleInitial || '';
   }
@@ -649,9 +657,11 @@ async function exportPrepaReportPDF(btn) {
   if (!r) return;
   if (btn) btn.disabled = true;
   try {
-    await chargerJsPDF();
-    const doc = await buildPrepaReportDoc(r);
-    doc.save(nomFichierRapport(r));
+    await avecChargement('Génération du PDF…', async () => {
+      await chargerJsPDF();
+      const doc = await buildPrepaReportDoc(r);
+      doc.save(nomFichierRapport(r));
+    });
   } finally {
     if (btn) btn.disabled = false;
   }

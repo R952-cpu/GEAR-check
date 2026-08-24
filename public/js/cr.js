@@ -213,14 +213,16 @@ async function addDefaut(btn) {
   const nom = document.getElementById('in-def-nom').value.trim();
   if (!nom) return;
   if (btn) { btn.disabled = true; btn.textContent = 'Ajout…'; }
-  const fd = new FormData();
-  fd.append('nom_objet', nom);
-  fd.append('equipement_label', document.getElementById('in-def-equip').value.trim());
-  fd.append('note', document.getElementById('in-def-note').value.trim());
-  for (const f of document.getElementById('in-def-photo').files) {
-    fd.append('photos', await compressImage(f));
-  }
-  await api.upload(`/api/compte-rendus/${S.crId}/defauts`, fd);
+  await avecChargement('Envoi du défaut…', async () => {
+    const fd = new FormData();
+    fd.append('nom_objet', nom);
+    fd.append('equipement_label', document.getElementById('in-def-equip').value.trim());
+    fd.append('note', document.getElementById('in-def-note').value.trim());
+    for (const f of document.getElementById('in-def-photo').files) {
+      fd.append('photos', await compressImage(f));
+    }
+    await api.upload(`/api/compte-rendus/${S.crId}/defauts`, fd);
+  });
   closeSheet();
   S.cr = await api.get(`/api/compte-rendus/${S.crId}`);
   renderCR();
@@ -262,9 +264,11 @@ async function saveDefaut(id, btn) {
   });
   const files = document.getElementById('in-def-photo').files;
   if (files.length) {
-    const fd = new FormData();
-    for (const f of files) fd.append('photos', await compressImage(f));
-    await api.upload(`/api/defauts/${id}/photos`, fd);
+    await avecChargement(files.length > 1 ? 'Envoi des photos…' : 'Envoi de la photo…', async () => {
+      const fd = new FormData();
+      for (const f of files) fd.append('photos', await compressImage(f));
+      await api.upload(`/api/defauts/${id}/photos`, fd);
+    });
   }
   closeSheet();
   S.cr = await api.get(`/api/compte-rendus/${S.crId}`);

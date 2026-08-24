@@ -327,8 +327,10 @@ async function importChecklist(btn) {
     try { parsed = JSON.parse(raw); } catch { throw new Error("Ce texte n'est pas un JSON valide."); }
     if (!Array.isArray(parsed) || !parsed.length) throw new Error('Le JSON doit être un tableau non vide.');
     if (btn) { btn.disabled = true; btn.textContent = 'Import…'; }
-    const res = await api.post(`/api/projects/${S.projectId}/checklist/import`, { items: parsed });
-    if (res.error) throw new Error(res.error);
+    await avecChargement("Import de l'inventaire…", async () => {
+      const res = await api.post(`/api/projects/${S.projectId}/checklist/import`, { items: parsed });
+      if (res.error) throw new Error(res.error);
+    });
     S.checklistOnboardStep = 'explain';
     S.checklistReimporting = false;
     await reloadChecklist();

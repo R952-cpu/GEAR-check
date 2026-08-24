@@ -19,4 +19,8 @@ window.addEventListener('error', (e) => {
 });
 
 // ===== INIT =====
-goHome();
+//
+// L'écran de lancement est déjà peint (il est écrit dans la page) : on le
+// laisse jouer pendant que l'accueil se charge, et il se retire quand les
+// deux sont prêts — ou plus tôt si l'utilisateur appuie sur « Ready ».
+jouerSplash(chargerAccueil());

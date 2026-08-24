@@ -80,9 +80,11 @@ async function uploadAttachment(btn) {
   if (!file) return;
   const b = btn || event?.target;
   if (b) { b.disabled = true; b.textContent = 'Envoi…'; }
-  const fd = new FormData();
-  fd.append('file', await compressImage(file, 2200, 0.75)); // PDF inchangé, photo compressée
-  await api.upload(`/api/projects/${S.projectId}/prepa/attachments`, fd);
+  await avecChargement('Envoi du fichier…', async () => {
+    const fd = new FormData();
+    fd.append('file', await compressImage(file, 2200, 0.75)); // PDF inchangé, photo compressée
+    await api.upload(`/api/projects/${S.projectId}/prepa/attachments`, fd);
+  });
   closeSheet();
   await reloadAttachments();
 }

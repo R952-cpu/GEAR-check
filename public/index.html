@@ -9,8 +9,120 @@
 <meta name="theme-color" content="#071013">
 <title>Gear Check</title>
 <link rel="stylesheet" href="/css/app.css">
+<style>
+/* Écran de lancement — styles critiques.
+   Ils vivent ici, dans la page elle-même, et non dans app.css : le splash doit
+   être peint au tout premier rendu, avant que la feuille de style externe ne
+   soit arrivée. Sinon on voit un éclair d'écran vide avant l'animation.
+   Le déroulé est entièrement en CSS ; le JavaScript ne pilote que le slogan
+   qui se tape et le bouton « Ready » (voir chargement.js). */
+#splash { position: fixed; inset: 0; z-index: 9999; overflow: hidden;
+  font-family: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif; }
+#splash .splash-fond-app { position: absolute; inset: 0; background: oklch(93% 0.004 90); }
+#splash .splash-fond-rouge { position: absolute; inset: 0; background: oklch(63% 0.21 27);
+  animation: splashRouge 2255ms cubic-bezier(.65,0,.35,1) 2900ms both; }
+@keyframes splashRouge { to { opacity: 0; } }
+
+#splash .splash-logo { position: absolute; left: 50%; top: 50%;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  transform: translate(-50%, -50%);
+  animation: splashLogo 2255ms cubic-bezier(.65,0,.35,1) 2900ms both; }
+@keyframes splashLogo { to { transform: translate(-50%, -50%) translateY(-29.1vh) scale(0.58); } }
+
+/* Les quatre coins de visée, puis la coche, se tracent : le trait est
+   entièrement décalé hors du chemin, puis ramené à zéro. */
+#splash .splash-coin { stroke-dasharray: 1; stroke-dashoffset: 1;
+  animation: splashTrace 900ms cubic-bezier(.22,1,.36,1) 500ms both,
+             splashEncre 2255ms cubic-bezier(.65,0,.35,1) 2900ms both; }
+#splash .splash-coche { stroke-dasharray: 1; stroke-dashoffset: 1;
+  animation: splashTrace 550ms cubic-bezier(.22,1,.36,1) 1500ms both,
+             splashEncreAccent 2255ms cubic-bezier(.65,0,.35,1) 2900ms both; }
+@keyframes splashTrace { to { stroke-dashoffset: 0; } }
+/* Le tracé est blanc sur le fond rouge ; quand le rouge s'efface, il vire aux
+   couleurs réelles du logo de l'app — sans quoi il s'évanouirait sur le fond
+   clair, ce qui ressemblerait à un défaut d'affichage. */
+@keyframes splashEncre       { to { stroke: oklch(15% 0.004 90); } }
+@keyframes splashEncreAccent { to { stroke: oklch(63% 0.21 27); } }
+
+#splash .splash-titre { font-weight: 800; font-size: 24px; letter-spacing: -0.01em;
+  text-transform: uppercase; color: #FFFFFF; opacity: 0;
+  animation: splashTitre 500ms cubic-bezier(.22,1,.36,1) 2200ms both,
+             splashTitreEncre 2255ms cubic-bezier(.65,0,.35,1) 2900ms both; }
+@keyframes splashTitreEncre { to { color: oklch(15% 0.004 90); } }
+@keyframes splashTitre { from { opacity: 0; transform: translateY(10px); }
+                         to   { opacity: 1; transform: none; } }
+
+#splash .splash-mascotte { position: absolute; left: 50%; top: 46%;
+  width: 80px; height: 80px; border-radius: 16px;
+  box-shadow: 0 10px 22px -8px rgba(20,15,10,0.35);
+  transform: translate(-50%, -50%) scale(0); opacity: 0;
+  animation: splashMascotte 1269ms cubic-bezier(.34,1.56,.64,1) 3745ms both; }
+@keyframes splashMascotte { to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+
+#splash .splash-slogan { position: absolute; left: 50%; top: 58%; width: 80%;
+  transform: translateX(-50%); text-align: center;
+  font-weight: 600; font-size: 14px; letter-spacing: 0.01em; color: oklch(45% 0.006 90);
+  opacity: 0; animation: splashSlogan 400ms ease-out 3900ms both; }
+@keyframes splashSlogan { to { opacity: 1; } }
+#splash .splash-curseur { opacity: .6; animation: splashCurseur 800ms steps(1) infinite; }
+@keyframes splashCurseur { 50% { opacity: 0; } }
+
+/* Le bouton n'existe qu'à partir de la moitié de l'animation : avant, il n'y
+   a rien à écourter. C'est le seul élément qui interrompt le splash — un
+   appui ailleurs ne fait rien. */
+#splash .splash-ready { position: absolute; left: 50%; bottom: calc(38px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%); padding: 9px 22px; border: 1px solid rgba(255,255,255,0.45);
+  border-radius: 999px; background: rgba(255,255,255,0.16); color: #FFFFFF;
+  font-family: inherit; font-size: 12px; font-weight: 800; letter-spacing: 0.6px;
+  text-transform: uppercase; cursor: pointer; opacity: 0; pointer-events: none;
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  transition: opacity .4s ease, background .15s ease;
+  animation: splashBouton 2255ms cubic-bezier(.65,0,.35,1) 2900ms both; }
+@keyframes splashBouton {
+  to { color: oklch(15% 0.004 90); border-color: oklch(80% 0.005 90);
+       background: oklch(99% 0 0 / 75%); } }
+#splash.splash-interruptible .splash-ready { opacity: 1; pointer-events: auto; }
+#splash .splash-ready:active { background: rgba(255,255,255,0.3); }
+
+#splash.splash-sortie { opacity: 0; transition: opacity .3s ease; pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  #splash * { animation: none !important; }
+  #splash .splash-fond-rouge { opacity: 0; }
+  #splash .splash-logo { transform: translate(-50%, -50%) translateY(-29.1vh) scale(0.58); }
+  #splash .splash-mascotte { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  #splash .splash-slogan { opacity: 1; }
+  #splash .splash-coin { stroke: oklch(15% 0.004 90); stroke-dashoffset: 0; }
+  #splash .splash-coche { stroke: oklch(63% 0.21 27); stroke-dashoffset: 0; }
+  #splash .splash-titre { color: oklch(15% 0.004 90); opacity: 1; }
+  #splash .splash-ready { opacity: 1; pointer-events: auto; color: oklch(15% 0.004 90);
+    border-color: oklch(80% 0.005 90); background: oklch(99% 0 0 / 75%); }
+}
+</style>
+
 </head>
 <body>
+<!-- Écran de lancement. Écrit en dur dans la page pour être peint au premier
+     rendu : une animation pilotée par JavaScript n'apparaîtrait qu'après le
+     chargement des scripts, laissant un éclair d'écran vide. -->
+<div id="splash">
+  <div class="splash-fond-app"></div>
+  <div class="splash-fond-rouge"></div>
+  <div class="splash-logo">
+    <svg width="160" height="160" viewBox="-8 -8 76 76" fill="none" aria-hidden="true">
+      <path class="splash-coin" d="M0,26 L0,0 L26,0" transform="translate(0,0) rotate(0)"    stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" pathLength="1"/>
+      <path class="splash-coin" d="M0,26 L0,0 L26,0" transform="translate(60,0) rotate(90)"  stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" pathLength="1"/>
+      <path class="splash-coin" d="M0,26 L0,0 L26,0" transform="translate(60,60) rotate(180)" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" pathLength="1"/>
+      <path class="splash-coin" d="M0,26 L0,0 L26,0" transform="translate(0,60) rotate(270)" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" pathLength="1"/>
+      <path class="splash-coche" d="M17,32 L26,41 L45,20" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" pathLength="1"/>
+    </svg>
+    <div class="splash-titre">Gear Check</div>
+  </div>
+  <img class="splash-mascotte" src="/vendor/mascot-runner.png" alt="" aria-hidden="true">
+  <div class="splash-slogan"><span class="splash-slogan-texte"></span><span class="splash-curseur">|</span></div>
+  <button class="splash-ready" type="button">Ready</button>
+</div>
+
 <div id="app">
 
 <!-- ===== SCREEN: HOME ===== -->
@@ -37,7 +149,7 @@
 <!-- ===== SCREEN: PROJECT ===== -->
 <div id="screen-project" class="screen">
   <div class="hdr">
-    <button class="hdr-back" onclick="go('home')" aria-label="Retour"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;"><path d="m15 18-6-6 6-6" /></svg></button>
+    <button class="hdr-back" onclick="retour('home')" aria-label="Retour"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;"><path d="m15 18-6-6 6-6" /></svg></button>
     <div style="flex:1">
       <div class="hdr-title" id="proj-title"></div>
       <div class="hdr-sub" id="proj-sub"></div>
@@ -69,7 +181,7 @@
 <!-- ===== SCREEN: PRÉPA ===== -->
 <div id="screen-prepa" class="screen">
   <div class="hdr">
-    <button class="hdr-back" onclick="go('project')" aria-label="Retour"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;"><path d="m15 18-6-6 6-6" /></svg></button>
+    <button class="hdr-back" onclick="retour('project')" aria-label="Retour"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;"><path d="m15 18-6-6 6-6" /></svg></button>
     <div style="flex:1"><div class="hdr-title">Prépa</div></div>
     <button class="hdr-action" id="prepa-add-btn" onclick="prepaAdd()" aria-label="Ajouter"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;"><path d="M5 12h14" /> <path d="M12 5v14" /></svg></button>
   </div>
@@ -79,7 +191,7 @@
 <!-- ===== SCREEN: COMPTE-RENDUS ===== -->
 <div id="screen-cr-list" class="screen">
   <div class="hdr">
-    <button class="hdr-back" onclick="go('project')" aria-label="Retour"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;"><path d="m15 18-6-6 6-6" /></svg></button>
+    <button class="hdr-back" onclick="retour('project')" aria-label="Retour"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;"><path d="m15 18-6-6 6-6" /></svg></button>
     <div style="flex:1"><div class="hdr-title">Compte-rendus</div></div>
     <button class="hdr-action" onclick="openNewCR()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;"><path d="M5 12h14" /> <path d="M12 5v14" /></svg> Semaine</button>
   </div>
@@ -89,7 +201,7 @@
 <!-- ===== SCREEN: COMPTE-RENDU DETAIL ===== -->
 <div id="screen-cr" class="screen">
   <div class="hdr">
-    <button class="hdr-back" onclick="go('cr-list')" aria-label="Retour"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;"><path d="m15 18-6-6 6-6" /></svg></button>
+    <button class="hdr-back" onclick="retour('cr-list')" aria-label="Retour"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;"><path d="m15 18-6-6 6-6" /></svg></button>
     <div style="flex:1"><div class="hdr-title" id="cr-title"></div></div>
     <button class="hdr-icon" onclick="openCRMenu()" aria-label="Options"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;"><circle cx="12" cy="12" r="1" /> <circle cx="19" cy="12" r="1" /> <circle cx="5" cy="12" r="1" /></svg></button>
   </div>
@@ -120,6 +232,7 @@
 <!-- jsPDF n'est pas chargé ici : il l'est à la demande, au premier export (voir chargerJsPDF dans core.js). -->
 <script src="/js/icones.js"></script>        <!-- jeu d'icônes Lucide embarqué -->
 <script src="/js/core.js"></script>          <!-- état S, appels API, utilitaires, panneau bas -->
+<script src="/js/chargement.js"></script>    <!-- splash et voiles de chargement -->
 <script src="/js/nav.js"></script>           <!-- navigation entre écrans, chargement des données -->
 <script src="/js/ecrans.js"></script>        <!-- accueil, écran projet, onglets de prépa -->
 <script src="/js/inventaire.js"></script>    <!-- onglet Inventaire : présence du matériel -->
