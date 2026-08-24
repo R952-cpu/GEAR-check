@@ -165,7 +165,7 @@ function renderPhotosEnAttente() {
       <img src="${p.apercu}" style="width:64px;height:64px;object-fit:cover;border-radius:9px;flex-shrink:0">
       <input class="form-input" style="flex:1" placeholder="Légende (facultative)"
              value="${esc(p.legende)}" oninput="majLegendePhotoEnAttente(${i}, this.value)">
-      <button class="btn-icon-sm" onclick="retirerPhotoEnAttente(${i})">✕</button>
+      <button class="btn-icon-sm" onclick="retirerPhotoEnAttente(${i})" aria-label="Retirer">${icone('x', { taille: 15 })}</button>
     </div>`).join('');
 }
 
@@ -201,7 +201,7 @@ function confirmGeneratePrepaReport() {
     <div class="form-group">
       <label class="form-label">Photos en fin de document</label>
       <div id="rapport-photos"></div>
-      <button class="btn btn-secondary" onclick="choisirPhotosRapport()">📷 Ajouter des photos</button>
+      <button class="btn btn-secondary" onclick="choisirPhotosRapport()" style="display:inline-flex;align-items:center;justify-content:center;gap:8px">${icone('camera', { taille: 16 })} Ajouter des photos</button>
     </div>
 
     <div class="confirm-btns">
@@ -266,7 +266,7 @@ async function generatePrepaReport(btn) {
     photosEnAttente = [];
     closeSheet();
     await reloadPrepaReports();
-    showToast(`✓ Compte-rendu ${libelleVersion(rapport)} généré (Fichiers → Archive)`);
+    showToast(`Compte-rendu ${libelleVersion(rapport)} généré (Fichiers → Archive)`);
   } catch (e) {
     // Le bouton est réactivé pour permettre une nouvelle tentative ; le filet
     // global (app.js) affiche le message d'erreur.
@@ -331,9 +331,9 @@ async function openPrepaReport(id) {
   body += `<div class="form-group" style="margin-top:18px">
       <label class="form-label">Photos du document</label>
       <div id="archive-photos">${renderPhotosArchive(r)}</div>
-      <button class="btn btn-secondary" onclick="ajouterPhotosArchive('${id}')">📷 Ajouter des photos</button>
+      <button class="btn btn-secondary" onclick="ajouterPhotosArchive('${id}')" style="display:inline-flex;align-items:center;justify-content:center;gap:8px">${icone('camera', { taille: 16 })} Ajouter des photos</button>
     </div>`;
-  body += `<button class="btn btn-primary" style="margin-bottom:10px" onclick="exportPrepaReportPDF(this)">📄 Réexporter en PDF</button>
+  body += `<button class="btn btn-primary" style="margin-bottom:10px" onclick="exportPrepaReportPDF(this)" style="display:inline-flex;align-items:center;justify-content:center;gap:8px">${icone('file-text', { taille: 16 })} Réexporter en PDF</button>
     <button class="btn btn-danger" onclick="deletePrepaReport('${id}')">Supprimer cette archive</button>`;
   openSheet(body, { autofocus: false });
 }
@@ -352,7 +352,7 @@ function renderPhotosArchive(r) {
       </a>
       <input class="form-input" style="flex:1" placeholder="Légende (facultative)"
              value="${esc(p.legende)}" onchange="enregistrerLegendeArchive('${p.id}', this.value)">
-      <button class="btn-icon-sm" onclick="supprimerPhotoArchive('${p.id}')">✕</button>
+      <button class="btn-icon-sm" onclick="supprimerPhotoArchive('${p.id}')" aria-label="Supprimer">${icone('x', { taille: 15 })}</button>
     </div>`).join('');
 }
 
@@ -376,7 +376,7 @@ async function ajouterPhotosArchive(id) {
     await api.upload(`/api/prepa-reports/${id}/photos`, envoi);
     await openPrepaReport(id);
     await reloadPrepaReports();
-    showToast('✓ Photos ajoutées — réexporte le PDF pour les y inclure');
+    showToast('Photos ajoutées — réexporte le PDF pour les y inclure');
   };
   input.click();
 }
@@ -386,7 +386,7 @@ async function enregistrerLegendeArchive(photoId, legende) {
   const r = window.__currentPrepaReport;
   const photo = (r?.photos || []).find(p => p.id === photoId);
   if (photo) photo.legende = legende;
-  showToast('✓ Légende enregistrée');
+  showToast('Légende enregistrée');
 }
 
 async function supprimerPhotoArchive(photoId) {

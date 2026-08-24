@@ -7,7 +7,7 @@
 function renderCRList() {
   const el = document.getElementById('cr-list');
   if (!S.crList.length) {
-    el.innerHTML = `<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Aucun compte-rendu — appuie sur "+ Semaine"</div></div>`;
+    el.innerHTML = `<div class="empty"><div class="empty-icon">${icone('clipboard-list', { taille: 40 })}</div><div class="empty-text">Aucun compte-rendu — appuie sur "+ Semaine"</div></div>`;
     return;
   }
   el.innerHTML = S.crList.map(cr => `
@@ -16,7 +16,7 @@ function renderCRList() {
         <div class="list-item-title">${esc(cr.semaine_label)}</div>
         <div class="list-item-sub">${cr.date ? formatDateFr(cr.date) : formatDate(cr.created_at)}</div>
       </div>
-      <span class="list-item-arrow">›</span>
+      <span class="list-item-arrow">${icone('chevron-right', { taille: 16 })}</span>
     </div>
   `).join('');
 }
@@ -27,25 +27,25 @@ function renderCR() {
   const el = document.getElementById('cr-content');
   const notes = S.cr.notes || [];
   let html = `<div class="pdf-banner" onclick="exportPDF()">
-    <span class="pdf-banner-icon">📄</span>
+    <span class="pdf-banner-icon">${icone('file-text', { taille: 22 })}</span>
     <div class="pdf-banner-text">
       <div class="pdf-banner-title">Exporter PDF</div>
       <div class="pdf-banner-sub">${S.cr.defauts.length} défaut(s)${notes.length ? ` · ${notes.length} note(s)` : ''}</div>
     </div>
-    <span style="color:var(--accent);font-size:16px">›</span>
+    <span style="color:var(--accent);display:flex">${icone('chevron-right', { taille: 16 })}</span>
   </div>`;
 
   html += notes.map(n => `
     <div class="cr-note note-${esc(n.color)}">
       <div class="cr-note-text">${esc(n.text)}</div>
       <div class="defaut-actions" style="margin-top:10px">
-        <button class="btn-icon-sm" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1)" onclick="openEditCRNote('${n.id}')">✎</button>
-        <button class="btn-icon-sm" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:var(--red)" onclick="deleteCRNote('${n.id}')">✕</button>
+        <button class="btn-icon-sm" style="background:var(--bg3)" onclick="openEditCRNote('${n.id}')" aria-label="Modifier">${icone('pencil', { taille: 15 })}</button>
+        <button class="btn-icon-sm" style="background:var(--bg3);color:var(--red)" onclick="deleteCRNote('${n.id}')" aria-label="Supprimer">${icone('x', { taille: 15 })}</button>
       </div>
     </div>`).join('');
 
   if (!S.cr.defauts.length && !notes.length) {
-    html += `<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">Rien pour l'instant — appuie sur + pour ajouter un défaut ou une note</div></div>`;
+    html += `<div class="empty"><div class="empty-icon">${icone('circle-check', { taille: 40 })}</div><div class="empty-text">Rien pour l'instant — appuie sur + pour ajouter un défaut ou une note</div></div>`;
   } else if (!S.cr.defauts.length) {
     html += '';
   } else {
@@ -59,8 +59,8 @@ function renderCR() {
         <div class="defaut-title">${esc(d.nom_objet)}${d.equipement_label ? ` · ${esc(d.equipement_label)}` : ''}</div>
         ${d.note ? `<div class="defaut-note">${esc(d.note)}</div>` : ''}
         <div class="defaut-actions">
-          <button class="btn-icon-sm" onclick="openEditDefaut('${d.id}')">✎</button>
-          <button class="btn-icon-sm" onclick="deleteDefaut('${d.id}')" style="color:var(--red)">✕</button>
+          <button class="btn-icon-sm" onclick="openEditDefaut('${d.id}')" aria-label="Modifier">${icone('pencil', { taille: 15 })}</button>
+          <button class="btn-icon-sm" onclick="deleteDefaut('${d.id}')" style="color:var(--red)" aria-label="Supprimer">${icone('x', { taille: 15 })}</button>
         </div>
       </div>`;
     }).join('');
@@ -124,8 +124,8 @@ async function deleteCR() {
 function openCRAddMenu() {
   openSheet(`
     <div class="sheet-title">Ajouter au compte-rendu</div>
-    <button class="btn btn-secondary" style="margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:10px" onclick="openAddDefaut()">🛠 Ajouter un défaut</button>
-    <button class="btn btn-secondary" style="display:flex;align-items:center;justify-content:center;gap:10px" onclick="openAddCRNote()">📝 Ajouter une note</button>
+    <button class="btn btn-secondary" style="margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:10px" onclick="openAddDefaut()">${icone('wrench', { taille: 16 })} Ajouter un défaut</button>
+    <button class="btn btn-secondary" style="display:flex;align-items:center;justify-content:center;gap:10px" onclick="openAddCRNote()">${icone('file-pen', { taille: 16 })} Ajouter une note</button>
   `);
 }
 
@@ -233,7 +233,7 @@ function openEditDefaut(id) {
     ? `<div class="photo-grid" style="padding:0;margin-bottom:8px">${photos.map(ph => `
         <div style="position:relative">
           <img class="photo-thumb" src="/photos/${esc(ph.file_path)}">
-          <button class="btn-icon-sm" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.65);color:var(--red);width:24px;height:24px" onclick="deleteDefautPhoto('${ph.id}','${id}')">✕</button>
+          <button class="btn-icon-sm" style="position:absolute;top:4px;right:4px;background:var(--surface);border:1px solid var(--border);color:var(--red);width:24px;height:24px" onclick="deleteDefautPhoto('${ph.id}','${id}')" aria-label="Supprimer la photo">${icone('x', { taille: 13 })}</button>
         </div>`).join('')}</div>`
     : '';
   openSheet(`

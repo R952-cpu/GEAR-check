@@ -7,17 +7,17 @@
 function renderHome() {
   const el = document.getElementById('home-list');
   if (!S.projects.length) {
-    el.innerHTML = `<div class="empty"><div class="empty-icon">🎬</div><div class="empty-text">Aucun projet — crée ton premier projet</div></div>`;
+    el.innerHTML = `<div class="empty"><div class="empty-icon">${icone('clapperboard', { taille: 40 })}</div><div class="empty-text">Aucun projet — crée ton premier projet</div></div>`;
     return;
   }
   el.innerHTML = S.projects.map(p => `
     <div class="project-card" onclick="goProject('${p.id}')">
-      <div class="project-icon">🎬</div>
+      <div class="project-icon">${icone('clapperboard', { taille: 19 })}</div>
       <div class="project-info">
         <div class="project-name">${esc(p.name)}</div>
         <div class="project-meta">${[p.prod, p.loueur].filter(Boolean).map(esc).join(' · ') || 'Aucun détail'}</div>
       </div>
-      <span style="color:var(--text3);font-size:18px">›</span>
+      <span class="list-item-arrow">${icone('chevron-right', { taille: 16 })}</span>
     </div>
   `).join('');
 }

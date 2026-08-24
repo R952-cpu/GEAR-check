@@ -10,16 +10,16 @@ function renderChecklistView() {
   const items = S.checklist.items || [];
   const phases = S.checklist.phases || [];
   if (!items.length) {
-    return `<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Importe d'abord ta liste dans l'onglet Inventaire pour générer les phases automatiquement.</div></div>`;
+    return `<div class="empty"><div class="empty-icon">${icone('clipboard-list', { taille: 40 })}</div><div class="empty-text">Importe d'abord ta liste dans l'onglet Inventaire pour générer les phases automatiquement.</div></div>`;
   }
   let html = prepaDateBanner();
   html += `<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
     <button class="chip" onclick="openCreatePhase()">＋ Créer une phase</button>
-    <button class="chip" style="${S.checklistAdvanced ? 'background:var(--accent-dim);border-color:rgba(46,214,179,0.35);color:var(--accent)' : ''}" onclick="toggleAdvancedMode()">${S.checklistAdvanced ? '✓ ' : ''}Checklist avancée</button>
-    <button class="chip" onclick="confirmGeneratePrepaReport()">📄 Compte-rendu de prépa</button>
+    <button class="chip" style="${S.checklistAdvanced ? 'background:var(--accent-dim);border-color:var(--accent);color:var(--accent-hover)' : ''}" onclick="toggleAdvancedMode()">${S.checklistAdvanced ? icone('check', { taille: 13, trait: 3 }) : ''}Checklist avancée</button>
+    <button class="chip" onclick="confirmGeneratePrepaReport()">${icone('file-text', { taille: 14 })} Compte-rendu de prépa</button>
   </div>`;
   if (!phases.length) {
-    html += `<div class="empty"><div class="empty-icon">🗂</div><div class="empty-text">Aucune phase pour l'instant. Elles se créent automatiquement à l'import selon le matériel présent, ou tu peux en créer une toi-même.</div></div>`;
+    html += `<div class="empty"><div class="empty-icon">${icone('folder-open', { taille: 40 })}</div><div class="empty-text">Aucune phase pour l'instant. Elles se créent automatiquement à l'import selon le matériel présent, ou tu peux en créer une toi-même.</div></div>`;
     return html;
   }
   html += `<div id="checklist-phases-container">`;
@@ -31,16 +31,16 @@ function renderChecklistView() {
     const collapsed = isCollapsed('phase-' + phase.id);
     html += `<div class="phase-group" data-phase-id="${phase.id}">
       <div class="phase-group-hdr" data-phase-drag="${phase.id}" onclick="handlePhaseHeaderClick('${phase.id}')">
-        <span style="color:var(--text3);font-size:13px;margin-right:2px">${collapsed ? '▸' : '▾'}</span>
+        <span style="color:var(--text3);display:flex;margin-right:2px">${icone(collapsed ? 'chevron-right' : 'chevron-down', { taille: 15 })}</span>
         <div style="flex:1;min-width:0">
           <div class="phase-group-title">${esc(phase.label)}</div>
           ${phase.sub ? `<div class="phase-group-sub">${esc(phase.sub)}</div>` : ''}
           <div class="progress-bar"><div class="progress-fill" style="width:${phaseItems.length ? Math.round(doneCount/phaseItems.length*100) : 0}%"></div></div>
         </div>
         <span style="font-size:12px;color:var(--text2);margin-right:4px">${doneCount}/${phaseItems.length}</span>
-        <button class="btn-icon-sm" onclick="event.stopPropagation();openManagePhase('${phase.id}')">✎</button>
+        <button class="btn-icon-sm" onclick="event.stopPropagation();openManagePhase('${phase.id}')" aria-label="Gérer la phase">${icone('pencil', { taille: 15 })}</button>
       </div>
-      ${collapsed ? '' : `<div>${phaseItems.length ? (phase.type === 'CAMERA' ? renderCameraPhaseBody(phaseItems) : renderPhaseBody(phaseItems)) : `<div style="padding:16px;color:var(--text3);font-size:13px">Phase vide — appuie sur ✎ pour y ajouter des items.</div>`}</div>`}
+      ${collapsed ? '' : `<div>${phaseItems.length ? (phase.type === 'CAMERA' ? renderCameraPhaseBody(phaseItems) : renderPhaseBody(phaseItems)) : `<div style="padding:16px;color:var(--text3);font-size:13px">Phase vide — appuie sur le crayon pour y ajouter des items.</div>`}</div>`}
     </div>`;
   }
   html += `</div>`;
@@ -86,20 +86,20 @@ function renderChecklistRow(it) {
   const checks = visibleChecks(it);
   let badgeHtml = '';
   if (st === 'partial') badgeHtml = `<span class="badge badge-orange">${checks.filter(c=>c.done).length}/${checks.length}</span>`;
-  else if (st === 'validated' && checks.length) badgeHtml = `<span class="badge badge-green">✓</span>`;
+  else if (st === 'validated' && checks.length) badgeHtml = `<span class="badge badge-green">${icone('check', { taille: 11, trait: 3 })}</span>`;
   const color = it.type === 'CAMERA' && it.camera_profile_id ? cameraProfileColor(it.camera_profile_id) : null;
   // Le carré de couleur vit hors du titre : un nom d'item long tronqué par
   // l'ellipsis du CSS le faisait disparaître silencieusement quand il était inline.
   const swatchHtml = color ? `<span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${esc(color)};flex-shrink:0" title="Profil réglages"></span>` : '';
   return `<div class="list-item" onclick="openChecklistItem('${it.id}')">
-    <div class="check-box ${it.presence_cochee?'checked':''}" onclick="event.stopPropagation();toggleItemPresence('${it.id}', ${it.presence_cochee})">${it.presence_cochee?'✓':''}</div>
+    <div class="check-box ${it.presence_cochee?'checked':''}" onclick="event.stopPropagation();toggleItemPresence('${it.id}', ${it.presence_cochee})">${it.presence_cochee ? icone('check', { taille: 13, trait: 3 }) : ''}</div>
     <div class="list-item-content" style="margin-left:2px">
       <div class="list-item-title">${esc(it.designation)}${it.quantite > 1 ? ' ×' + it.quantite : ''}</div>
       ${(it.identifiant || it.reference || it.emplacement) ? `<div class="list-item-sub">${[it.identifiant && ('ID : ' + it.identifiant), it.reference, it.emplacement].filter(Boolean).map(esc).join(' · ')}</div>` : ''}
     </div>
     ${swatchHtml}
     ${badgeHtml}
-    <span class="list-item-arrow">›</span>
+    <span class="list-item-arrow">${icone('chevron-right', { taille: 16 })}</span>
   </div>`;
 }
 
@@ -131,13 +131,13 @@ function openChecklistItem(id) {
     <div class="form-group">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <label class="form-label" style="margin:0">Checking qualité</label>
-        ${shownChecks.length ? `<button class="chip" style="padding:6px 12px;font-size:12px" onclick="quickOkItem('${id}')">${allChecked ? '🔄 Tout décocher' : '⚡ Tout cocher'}</button>` : ''}
+        ${shownChecks.length ? `<button class="chip" style="padding:6px 12px;font-size:12px" onclick="quickOkItem('${id}')">${allChecked ? icone('rotate-ccw', { taille: 13 }) + ' Tout décocher' : icone('zap', { taille: 13 }) + ' Tout cocher'}</button>` : ''}
       </div>
       ${shownChecks.length ? `<div class="card" style="margin-bottom:10px">${shownChecks.map(c => `
         <div class="check-item">
-          <div class="check-box ${c.done?'checked':''}" onclick="toggleCheck('${c.id}','${id}',${c.done})">${c.done?'✓':''}</div>
+          <div class="check-box ${c.done?'checked':''}" onclick="toggleCheck('${c.id}','${id}',${c.done})">${c.done ? icone('check', { taille: 13, trait: 3 }) : ''}</div>
           <div class="check-item-content"><div class="check-item-label ${c.done?'done':''}">${esc(c.label)}</div></div>
-          <button class="btn-icon-sm" style="color:var(--red)" onclick="deleteCustomCheck('${c.id}','${id}')">✕</button>
+          <button class="btn-icon-sm" style="color:var(--red)" onclick="deleteCustomCheck('${c.id}','${id}')" aria-label="Supprimer">${icone('x', { taille: 15 })}</button>
         </div>`).join('')}</div>` : ''}
       ${hiddenCount ? `<div style="font-size:12px;color:var(--text2);margin-bottom:10px">${hiddenCount} réglage(s) avancé(s) masqué(s) — active « Checklist avancée » dans l'onglet Checklist pour les voir.</div>` : ''}
       <div style="display:flex;gap:8px">
@@ -148,7 +148,7 @@ function openChecklistItem(id) {
   const notesHtml = (it.notes || []).map(n => `
     <div class="list-item" style="cursor:default">
       <div class="list-item-content"><div class="list-item-title" style="font-weight:400;white-space:normal;overflow:visible;text-overflow:clip">${esc(n.text)}</div></div>
-      <button class="btn-icon-sm" style="color:var(--red)" onclick="deleteChecklistNote('${n.id}','${id}')">✕</button>
+      <button class="btn-icon-sm" style="color:var(--red)" onclick="deleteChecklistNote('${n.id}','${id}')" aria-label="Supprimer">${icone('x', { taille: 15 })}</button>
     </div>`).join('');
 
   const phases = S.checklist.phases || [];
@@ -160,7 +160,7 @@ function openChecklistItem(id) {
   openSheet(`
     <div class="sheet-title">${esc(it.designation)}</div>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
-      <div class="check-box ${it.presence_cochee?'checked':''}" style="width:32px;height:32px" onclick="toggleItemPresence('${id}',${it.presence_cochee},true)">${it.presence_cochee?'✓':''}</div>
+      <div class="check-box ${it.presence_cochee?'checked':''}" style="width:32px;height:32px" onclick="toggleItemPresence('${id}',${it.presence_cochee},true)">${it.presence_cochee ? icone('check', { taille: 13, trait: 3 }) : ''}</div>
       <div>
         <div style="font-weight:650;font-size:15px">Présent physiquement</div>
         <div style="font-size:12.5px;color:${stColor[st]};font-weight:600">${stLabel[st]}</div>
@@ -207,7 +207,7 @@ function renderCameraAssignBlock(it) {
       <label class="form-label">Réglages du profil « ${esc(profile.label)} »</label>
       <div class="card">${(profile.settings || []).map(s => `
         <div class="check-item">
-          <div class="check-box ${s.done?'checked':''}" onclick="toggleProfileSettingInItem('${s.id}',${s.done},'${it.id}')">${s.done?'✓':''}</div>
+          <div class="check-box ${s.done?'checked':''}" onclick="toggleProfileSettingInItem('${s.id}',${s.done},'${it.id}')">${s.done ? icone('check', { taille: 13, trait: 3 }) : ''}</div>
           <div class="check-item-content"><div class="check-item-label ${s.done?'done':''}">${esc(s.text)}</div></div>
         </div>`).join('') || `<div style="padding:14px 16px;color:var(--text3);font-size:13px">Aucun réglage sur ce profil — ajoute-les depuis l'onglet Réglages.</div>`}</div>
     </div>`;
@@ -283,7 +283,7 @@ async function doResetAll(btn) {
   S.project.prepa_date = prepa_date;
   closeSheet();
   await reloadChecklist();
-  showToast('✓ Nouvelle prépa démarrée — tout décoché');
+  showToast('Nouvelle prépa démarrée — tout décoché');
 }
 // Case d'un check qualité : c'est le geste le plus répété d'une prépa, donc
 // celui qui gagne le plus à ne pas attendre le serveur.

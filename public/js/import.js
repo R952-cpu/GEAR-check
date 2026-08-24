@@ -249,7 +249,7 @@ function renderChecklistOnboarding() {
 function renderOnboardExplain() {
   return `
   <div class="card" style="padding:20px">
-    <div class="card-title" style="margin-bottom:12px">📋 ${S.checklistReimporting ? 'Réimporte ta checklist' : 'Prépare ta checklist'}</div>
+    <div class="card-title" style="margin-bottom:12px">${icone('clipboard-list', { taille: 17, style: 'vertical-align:-3px' })} ${S.checklistReimporting ? 'Réimporte ta checklist' : 'Prépare ta checklist'}</div>
     <p style="font-size:14px;color:var(--text2);line-height:1.75;margin-bottom:16px">
       1. Ouvre <strong style="color:var(--accent)">Gemini</strong> (le plus fiable pour l'instant — les autres respectent moins bien le format demandé).<br>
       2. Dépose ta liste matériel — PDF, ou <strong>photo du bon de préparation</strong> si des lignes sont barrées à la main — et colle le prompt ci-dessous.<br>
@@ -257,10 +257,10 @@ function renderOnboardExplain() {
       4. Reviens ici et importe-le à l'étape suivante.<br>
       <span style="opacity:.75">Le prompt sait lire les lots (« Sony FX6 COMBO » et son détail en dessous) pour ne pas compter deux fois le même matériel.</span>
     </p>
-    <div style="background:rgba(0,0,0,0.32);border:1px solid rgba(255,255,255,0.11);border-radius:13px;padding:12px;max-height:220px;overflow-y:auto;margin-bottom:16px">
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;max-height:220px;overflow-y:auto;margin-bottom:16px">
       <pre style="white-space:pre-wrap;font-size:12px;color:var(--text2);font-family:ui-monospace,monospace;line-height:1.5;margin:0">${esc(CHECKLIST_PROMPT)}</pre>
     </div>
-    <button class="btn btn-secondary" style="margin-bottom:10px" onclick="copyChecklistPrompt(this)">📋 Copier le prompt</button>
+    <button class="btn btn-secondary" style="margin-bottom:10px" onclick="copyChecklistPrompt(this)">${icone('clipboard-paste', { taille: 15 })} Copier le prompt</button>
     ${S.checklistReimporting ? `<button class="btn btn-secondary" style="margin-bottom:10px" onclick="cancelReimport()">Annuler la réimportation</button>` : ''}
     <button class="btn btn-primary" onclick="setOnboardStep('upload')">Suivant</button>
   </div>`;
@@ -268,10 +268,10 @@ function renderOnboardExplain() {
 async function copyChecklistPrompt(btn) {
   const ok = await copyToClipboard(CHECKLIST_PROMPT);
   if (ok) {
-    showToast('✓ Copié dans le presse-papier');
+    showToast('Copié dans le presse-papier');
     if (btn) {
       const orig = btn.textContent;
-      btn.textContent = '✓ Copié';
+      btn.textContent = 'Copié';
       setTimeout(() => { btn.textContent = orig; }, 1500);
     }
   } else {
@@ -289,12 +289,12 @@ function setOnboardStep(step) { S.checklistOnboardStep = step; renderPrepa(); }
 function renderOnboardUpload(isReimport) {
   return `
   <div class="card" style="padding:20px">
-    <div class="card-title" style="margin-bottom:12px">📥 ${isReimport ? 'Réimporter le JSON' : 'Importer le JSON'}</div>
+    <div class="card-title" style="margin-bottom:12px">${icone('download', { taille: 17, style: 'vertical-align:-3px' })} ${isReimport ? 'Réimporter le JSON' : 'Importer le JSON'}</div>
     <p style="font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:16px">Sélectionne le fichier .json reçu, ou colle directement le texte JSON ci-dessous.</p>
     <div class="form-group"><label class="form-label">Fichier JSON</label><input type="file" id="in-json-file" accept=".json,application/json" class="form-input" style="padding:10px"></div>
     <div class="form-group"><label class="form-label">Ou coller le JSON</label><textarea class="form-input" id="in-json-text" rows="6" placeholder='[{"designation": "Sony FX6", "quantite": 1, "categorie": "CAMERA", "type": "CAMERA", ...}]'></textarea></div>
     <div id="import-error" style="color:var(--red);font-size:13px;margin-bottom:10px;display:none"></div>
-    <button class="btn btn-secondary" style="margin-bottom:10px" onclick="${isReimport ? 'cancelReimport()' : "setOnboardStep('explain')"}">${isReimport ? 'Annuler' : '‹ Retour'}</button>
+    <button class="btn btn-secondary" style="margin-bottom:10px" onclick="${isReimport ? 'cancelReimport()' : "setOnboardStep('explain')"}">${isReimport ? 'Annuler' : icone('chevron-left', { taille: 15 }) + ' Retour'}</button>
     <button class="btn btn-primary" onclick="importChecklist(this)">Importer</button>
   </div>`;
 }

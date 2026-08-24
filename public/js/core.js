@@ -203,13 +203,23 @@ async function copyToClipboard(text) {
 }
 
 // Message de confirmation flottant, réutilisable dans toute l'app.
+/**
+ * Affiche une confirmation flottante.
+ *
+ * L'icône est portée par le toast lui-même plutôt que par le texte : la charte
+ * remplace les emoji par des icônes Lucide, et un pictogramme collé au début
+ * de chaque message serait un caractère, pas une icône.
+ *
+ * @param {string} message  Texte affiché — échappé, il peut venir du serveur.
+ * @param {boolean} [isError]  Bascule sur l'habillage d'erreur.
+ */
 function showToast(message, isError) {
   const existing = document.getElementById('app-toast');
   if (existing) existing.remove();
   const el = document.createElement('div');
   el.id = 'app-toast';
   el.className = 'toast' + (isError ? ' toast-error' : '');
-  el.textContent = message;
+  el.innerHTML = `${icone(isError ? 'x' : 'check', { taille: 16 })}<span>${esc(message)}</span>`;
   document.body.appendChild(el);
   requestAnimationFrame(() => el.classList.add('show'));
   setTimeout(() => {

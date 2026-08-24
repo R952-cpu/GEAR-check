@@ -18,7 +18,7 @@ function openCreatePhase() {
   if (!items.length) { showToast("Importe d'abord du matériel dans Inventaire", true); return; }
   const rows = items.map(it => `
     <div class="pick-row" onclick="togglePickItem('${it.id}')">
-      <div class="pick-box" id="pick-${it.id}">✓</div>
+      <div class="pick-box" id="pick-${it.id}">${icone('check', { taille: 13, trait: 3 })}</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:14px;font-weight:600">${esc(it.designation)}</div>
         <div style="font-size:11.5px;color:var(--text2)">${esc(CATEGORIE_LABELS[it.categorie]||it.categorie)}${it.phase_id ? ' · déjà dans une phase' : ''}</div>
@@ -64,13 +64,13 @@ function openManagePhase(id) {
   const currentHtml = inPhase.length ? inPhase.map(it => `
     <div class="pick-row">
       <div style="flex:1;font-size:14px;min-width:0">${esc(it.designation)}</div>
-      <button class="btn-icon-sm" style="color:var(--red)" onclick="removeItemFromPhase('${it.id}','${id}')">✕</button>
+      <button class="btn-icon-sm" style="color:var(--red)" onclick="removeItemFromPhase('${it.id}','${id}')" aria-label="Retirer">${icone('x', { taille: 15 })}</button>
     </div>`).join('') : `<div style="padding:10px 4px;color:var(--text3);font-size:13px">Aucun item dans cette phase</div>`;
 
   window.__pickedItems = new Set();
   const addableHtml = notInPhase.map(it => `
     <div class="pick-row" onclick="togglePickItem('${it.id}')">
-      <div class="pick-box" id="pick-${it.id}">✓</div>
+      <div class="pick-box" id="pick-${it.id}">${icone('check', { taille: 13, trait: 3 })}</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:14px;font-weight:600">${esc(it.designation)}</div>
         <div style="font-size:11.5px;color:var(--text2)">${esc(CATEGORIE_LABELS[it.categorie]||it.categorie)}${it.phase_id ? ' · déjà dans une autre phase' : ''}</div>

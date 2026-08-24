@@ -5,16 +5,16 @@
 // ===== RENDER: MANQUES =====
 function renderManques(manques) {
   if (!manques.length) {
-    return `<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">Aucun manque — liste ici ce qui est à demander au loueur</div></div>`;
+    return `<div class="empty"><div class="empty-icon">${icone('package', { taille: 40 })}</div><div class="empty-text">Aucun manque — liste ici ce qui est à demander au loueur</div></div>`;
   }
   const stLabel = { a_demander: 'À demander', demande: 'Demandé', obtenu: 'Obtenu' };
   let html = `<div class="pdf-banner" onclick="exportManquesPDF()">
-    <span class="pdf-banner-icon">📄</span>
+    <span class="pdf-banner-icon">${icone('file-text', { taille: 22 })}</span>
     <div class="pdf-banner-text">
       <div class="pdf-banner-title">Exporter la liste pour le loueur</div>
       <div class="pdf-banner-sub">PDF téléchargé et classé dans Fichiers</div>
     </div>
-    <span style="color:var(--accent);font-size:16px">›</span>
+    <span style="color:var(--accent);display:flex">${icone('chevron-right', { taille: 16 })}</span>
   </div>`;
   for (const m of manques) {
     html += `<div class="manque">
@@ -27,8 +27,8 @@ function renderManques(manques) {
       </div>
       ${m.note ? `<div class="manque-note">${esc(m.note)}</div>` : ''}
       <div class="defaut-actions" style="margin-top:10px">
-        <button class="btn-icon-sm" style="background:var(--bg3)" onclick="openEditManque('${m.id}')">✎</button>
-        <button class="btn-icon-sm" style="background:var(--bg3);color:var(--red)" onclick="deleteManque('${m.id}')">✕</button>
+        <button class="btn-icon-sm" style="background:var(--bg3)" onclick="openEditManque('${m.id}')" aria-label="Modifier">${icone('pencil', { taille: 15 })}</button>
+        <button class="btn-icon-sm" style="background:var(--bg3);color:var(--red)" onclick="deleteManque('${m.id}')" aria-label="Supprimer">${icone('x', { taille: 15 })}</button>
       </div>
     </div>`;
   }
@@ -102,7 +102,7 @@ async function exportManquesPDF() {
     const fd = new FormData();
     fd.append('file', file);
     await api.upload(`/api/projects/${S.projectId}/prepa/attachments`, fd);
-    showToast('✓ Liste exportée et classée dans Fichiers');
+    showToast('Liste exportée et classée dans Fichiers');
   } catch {
     showToast('PDF téléchargé (échec de la copie dans Fichiers)', true);
   }
